@@ -1,0 +1,391 @@
+/* ----------------------------------------------------- */
+/* 1. GLOBAL RESET AND BASE LAYOUT (Tüm Uygulama İçin)  */
+/* ----------------------------------------------------- */
+body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: #f4f4f4; /* Açık gri arka plan */
+    font-family: Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#root, .App {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ------------------------------------- */
+/* 2. HEADER STYLES (App.js)             */
+/* ------------------------------------- */
+.App-header {
+    background-color: #343a40; /* Koyu gri/siyah */
+    padding: 15px 20px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.App-header h1 {
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.app-header-link {
+    color: white;
+    text-decoration: none;
+}
+
+/* ------------------------------------- */
+/* 3. MAIN CONTENT AREA                  */
+/* ------------------------------------- */
+.App-main {
+    flex-grow: 1; /* İçeriğin dikeyde yer kaplamasını sağlar */
+    padding: 20px;
+    background-color: #f4f4f4;
+}
+
+/* ----------------------------------------------------- */
+/* 4. HOME PAGE STYLES (HomePage Component)              */
+/* ----------------------------------------------------- */
+
+.homepage-container {
+    padding: 40px;
+    max-width: 400px;
+    margin: 50px auto;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.homepage-title {
+    color: #343a40;
+    margin-bottom: 30px;
+}
+
+.homepage-link-group {
+    margin-bottom: 20px;
+}
+
+.homepage-link {
+    display: block;
+    padding: 15px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.2em;
+    transition: background-color 0.2s;
+}
+
+.teacher-link {
+    background-color: #ffc107; /* Sarı */
+    color: #343a40;
+}
+
+.teacher-link:hover {
+    background-color: #e0a800;
+}
+
+.student-link {
+    background-color: #17a2b8; /* Mavi/Cyan */
+    color: white;
+}
+
+.student-link:hover {
+    background-color: #138496;
+}
+
+/* ----------------------------------------------------- */
+/* 5. SUCCESS PAGE STYLES (SuccessPage Component)        */
+/* ----------------------------------------------------- */
+
+.success-container {
+    padding: 40px;
+    text-align: center;
+    max-width: 500px;
+    margin: 50px auto;
+    border: 2px solid #28a745; /* Yeşil kenarlık */
+    border-radius: 8px;
+    background-color: #e9f7ef; /* Açık yeşil arka plan */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.success-title {
+    color: #28a745; /* Yeşil metin */
+    margin-bottom: 15px;
+}
+
+.success-text {
+    font-size: 1.1em;
+    margin-bottom: 10px;
+}
+
+.session-code-text {
+    margin-top: 5px;
+}
+
+.success-home-button {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.success-home-button:hover {
+    background-color: #0056b3;
+}
+
+/* ----------------------------------------------------- */
+/* 6. TEACHER & STUDENT PANEL STYLES (Bileşen Bağımlı)   */
+/* ----------------------------------------------------- */
+
+/* TEACHER PANEL STYLES */
+.teacher-panel-container {
+    max-width: 700px;
+    margin: 20px auto;
+    padding: 30px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    text-align: left;
+}
+
+.panel-title {
+    color: #343a40;
+    text-align: center;
+    margin-bottom: 25px;
+    border-bottom: 2px solid #ffc107;
+    padding-bottom: 10px;
+}
+
+.control-group, .button-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.control-label {
+    font-weight: bold;
+    min-width: 150px;
+}
+
+.duration-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 80px;
+    text-align: center;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s, opacity 0.2s;
+    white-space: nowrap; /* Buton içeriğinin tek satırda kalmasını sağlar */
+}
+
+.btn-create {
+    background-color: #28a745;
+    color: white;
+}
+.btn-create:hover {
+    background-color: #1e7e34;
+}
+
+.btn-show {
+    background-color: #007bff;
+    color: white;
+}
+.btn-show:hover {
+    background-color: #0056b3;
+}
+
+.btn-renew {
+    background-color: #ffc107;
+    color: #343a40;
+}
+.btn-renew:hover {
+    background-color: #e0a800;
+}
+
+.btn-clear {
+    background-color: #dc3545;
+    color: white;
+}
+.btn-clear:hover {
+    background-color: #bd2130;
+}
+
+.btn[disabled], .btn-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.session-details {
+    margin-top: 15px;
+    padding: 15px;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    background-color: #fff3cd;
+}
+
+.qr-container {
+    text-align: center;
+    margin: 25px 0;
+    border: 1px dashed #007bff;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.qr-image {
+    width: 200px;
+    height: 200px;
+    border: 5px solid white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin-top: 10px;
+}
+
+.qr-payload-url {
+    margin-top: 15px;
+}
+
+.qr-url-textarea {
+    width: 100%;
+    resize: vertical;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 12px;
+    box-sizing: border-box;
+    margin-top: 5px;
+    background-color: #eee;
+}
+
+.attendance-list-container {
+    margin-top: 30px;
+    border-top: 2px solid #ccc;
+    padding-top: 20px;
+}
+
+.attendance-list {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0 0 0;
+}
+
+.attendance-item {
+    background-color: #e9ecef;
+    padding: 8px 15px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95em;
+    border-left: 5px solid #007bff;
+}
+
+.message-info {
+    padding: 10px;
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: bold;
+}
+
+
+/* STUDENT SCANNER STYLES */
+.student-scanner-container {
+    max-width: 500px; 
+    margin: 20px auto; 
+    padding: 30px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    text-align: left;
+}
+
+.scanner-title {
+    text-align: center; 
+    color: #007bff;
+    margin-bottom: 25px;
+}
+
+.input-label {
+    display: block; 
+    margin-bottom: 5px; 
+    font-weight: bold;
+}
+
+.scanner-input, .scanner-textarea {
+    display: block; 
+    width: 100%; 
+    padding: 10px;
+    margin-bottom: 15px; 
+    border: 1px solid #ccc; 
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.scanner-textarea {
+    resize: vertical;
+    font-size: 12px;
+    margin-bottom: 10px; 
+}
+
+.qr-reader-frame {
+    border: 2px solid #007bff; 
+    border-radius: 8px; 
+    overflow: hidden; 
+    margin-bottom: 15px;
+}
+
+.qr-reader-component {
+    width: 100%;
+}
+
+.scanner-button {
+    padding: 10px 15px;
+    width: 100%; 
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    color: white; 
+    transition: background-color 0.2s, opacity 0.2s;
+    margin-bottom: 15px;
+}
+
+.btn-success {
+    background-color: #28a745;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+}
+
+.btn-primary {
+    background-color: #007bff;
+}
+
+.scanner-button:hover:not([disabled]) {
+    opacity: 0.9;
+}
+
+.scanner-button.btn-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

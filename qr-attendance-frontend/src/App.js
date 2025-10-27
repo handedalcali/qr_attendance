@@ -1,0 +1,80 @@
+// src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react-router-dom';
+
+// Sayfa Bileşenleri
+import TeacherPanel from './pages/TeacherPanel';
+import StudentScanner from './pages/StudentScanner';
+
+import './App.css';
+
+/**
+ * Ana Giriş Sayfası ( "/" yolu için)
+ */
+const HomePage = () => {
+  return (
+    <div className="homepage-container">
+      <h2 className="homepage-title">QR Yoklama Sistemi Giriş</h2>
+      <div className="homepage-link-group">
+        <Link to="/teacher" className="homepage-link teacher-link">
+          Öğretmen Girişi (Oturum Başlat)
+        </Link>
+      </div>
+      <div className="homepage-link-group">
+        <Link to="/student" className="homepage-link student-link">
+          Öğrenci Girişi (QR Tarama)
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Başarılı Kayıt Sonrası Gösterilecek Basit Sayfa Bileşeni
+ */
+const SuccessPage = () => {
+  const location = useLocation();
+  const sessionId = new URLSearchParams(location.search).get("sessionId");
+
+  return (
+    <div className="success-container">
+      <h2 className="success-title">✅ Yoklamaya Başarıyla Katıldınız!</h2>
+      <p className="success-text">Kaydınız başarıyla tamamlandı.</p>
+      {sessionId && <p className="session-code-text">Oturum Kodu: <strong>{sessionId}</strong></p>}
+      <Link to="/student" className="success-home-button">
+        Ana Sayfaya Dön
+      </Link>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <div className="App">
+        <header className="App-header">
+          <Link to="/" className="app-header-link">
+            <h1>QR Attendance System</h1>
+          </Link>
+        </header>
+
+        <main className="App-main">
+          <Switch>
+            <Route exact path="/" component={HomePage} />
+            <Route path="/teacher" component={TeacherPanel} />
+            <Route path="/student" component={StudentScanner} />
+            <Route path="/yoklama-basarili" component={SuccessPage} />
+            <Route path="*" render={() => (
+              <div className="error-404-container">
+                <h2>Sayfa Bulunamadı (404)</h2>
+                <Link to="/" className="success-home-button">Ana Sayfaya Dön</Link>
+              </div>
+            )} />
+          </Switch>
+        </main>
+      </div>
+    </Router>
+  );
+}
+
+export default App;
