@@ -240,12 +240,18 @@ body {
     background-color: #fff3cd;
 }
 
+/* --- QR container: merkezi hizalama ve responsive canvas --- */
 .qr-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* yatay ortala */
+    justify-content: center;
     text-align: center;
     margin: 25px 0;
     border: 1px dashed #007bff;
     padding: 15px;
     border-radius: 8px;
+    gap: 12px;
 }
 
 .qr-image {
