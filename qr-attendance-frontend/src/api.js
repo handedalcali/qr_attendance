@@ -1,3 +1,4 @@
+// src/api.js
 import axios from "axios";
 
 const api = axios.create({
@@ -6,8 +7,11 @@ const api = axios.create({
   timeout: 10000,
 });
 
-export async function createSession(durationMinutes = 10) {
-  const res = await api.post("/sessions", { durationMinutes });
+export async function createSession(durationMinutes = 10, createdBy = "", courseName = "") {
+  const body = { durationMinutes };
+  if (createdBy) body.createdBy = String(createdBy).trim();
+  if (courseName) body.courseName = String(courseName).trim();
+  const res = await api.post("/sessions", body);
   return res.data;
 }
 
@@ -17,12 +21,6 @@ export async function getAttendance(sessionId) {
   return res.data;
 }
 
-/**
- * Öğrenci yoklamasını backend'e gönderir
- * @param {object} normalizedPayload qrPayload objesi veya { sessionId }
- * @param {string} studentId öğrenci numarası
- * @param {string} studentName öğrenci ismi (zorunlu)
- */
 export async function markAttendance(normalizedPayload, studentId, studentName) {
   if (!normalizedPayload || !studentId || !studentName) throw new Error("markAttendance: eksik parametre");
 
@@ -30,8 +28,7 @@ export async function markAttendance(normalizedPayload, studentId, studentName) 
     ? { qrPayload: normalizedPayload, studentId: String(studentId).trim(), name: String(studentName).trim() }
     : { sessionId: normalizedPayload.sessionId, studentId: String(studentId).trim(), name: String(studentName).trim() };
 
-  console.log("Request body:", body); // 🔹 Debug için, backend’e ne gidiyor kontrol et
-
+  console.log("Request body:", body);
   try {
     const res = await api.post("/attend", body);
     return res.data;

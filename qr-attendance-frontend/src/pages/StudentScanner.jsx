@@ -100,23 +100,6 @@ export default function StudentScanner() {
     }
   };
 
-  // Manuel test
-  const handleManualTest = async () => {
-    const manual = typeof qrPayload === "string" ? qrPayload : (qrPayload ? JSON.stringify(qrPayload) : "");
-    if (!manual) {
-      setMessage("Manuel payload boş. Lütfen textarea'ya payload girin.");
-      return;
-    }
-
-    const normalized = normalizePayload(manual);
-    if (!normalized || !normalized.sessionId) {
-      setMessage("Manuel payload geçersiz. Lütfen JSON veya sessionId girin.");
-      return;
-    }
-
-    await handleMark(normalized);
-  };
-
   // QR tarayıcı
   const handleScan = (data) => {
     if (data) {
@@ -196,15 +179,6 @@ export default function StudentScanner() {
           className={`scanner-button btn-primary ${loading || !studentId || !studentName || !qrPayload ? 'btn-disabled' : ''}`}
         >
           {loading ? "Gönderiliyor..." : "Yoklamayı Gönder"}
-        </button>
-
-        <button
-          onClick={handleManualTest}
-          disabled={loading || !qrPayload}
-          className={`scanner-button btn-test ${loading || !qrPayload ? 'btn-disabled' : ''}`}
-          title="Textarea'daki payload ile test gönderimi yapar"
-        >
-          Manuel Test Gönder
         </button>
       </div>
 

@@ -7,7 +7,6 @@ function createQrUrl(payload, currentUrl) {
   const url = new URL(currentUrl);
   url.pathname = "/student";
   url.search = "";
-  // Tüm payload'u encode et (sessionId, expiresAt, sig)
   url.searchParams.set("payload", encodeURIComponent(JSON.stringify(payload)));
   return url.toString();
 }
@@ -20,6 +19,8 @@ function formatExpiry(expiresAt) {
 
 export default function TeacherPanel() {
   const [duration, setDuration] = useState(10);
+  const [teacherName, setTeacherName] = useState("");
+  const [courseName, setCourseName] = useState("");
   const [qrPayload, setQrPayload] = useState(null);
   const [sessionInfo, setSessionInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,18 +30,28 @@ export default function TeacherPanel() {
 
   useEffect(() => {
     if (!sessionInfo?.sessionId) return;
-    const interval = setInterval(async () => {
+
+    const fetchAttendance = async () => {
       try {
         const data = await getAttendance(sessionInfo.sessionId);
         setAttendance(data || []);
       } catch (err) {
         console.error("Yoklama çekilemedi:", err);
       }
-    }, 5000);
+    };
+
+    fetchAttendance();
+    const interval = setInterval(fetchAttendance, 5000);
+
     return () => clearInterval(interval);
-  }, [sessionInfo]);
+  }, [sessionInfo?.sessionId]);
 
   const handleCreate = async () => {
+    if (!teacherName.trim() || !courseName.trim()) {
+      setMsg("Öğretmen adı ve ders adı zorunludur.");
+      return;
+    }
+
     setLoading(true);
     setMsg("");
     setSessionInfo(null);
@@ -52,7 +63,12 @@ export default function TeacherPanel() {
         : { sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, sig: res.sig };
       const fullQrUrl = createQrUrl(parsedPayload, window.location.href);
 
-      setSessionInfo({ sessionId: res.sessionId || res.id, expiresAt: res.expiresAt });
+      setSessionInfo({
+        sessionId: res.sessionId || res.id,
+        expiresAt: res.expiresAt,
+        teacherName: teacherName.trim(),
+        courseName: courseName.trim(),
+      });
       setQrPayload(parsedPayload);
       setStudentQrUrl(fullQrUrl);
       setMsg("Oturum oluşturuldu: " + (res.sessionId || res.id || ""));
@@ -62,6 +78,23 @@ export default function TeacherPanel() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadAttendance = () => {
+    if (!attendance.length) {
+      setMsg("Yoklama listesi boş, indirme yapılamaz.");
+      return;
+    }
+    const csvHeader = "Öğrenci Adı, Katılım Zamanı\n";
+    const csvRows = attendance.map(s => `${s.name || s.id},${s.timestamp ? new Date(s.timestamp).toLocaleString() : ""}`).join("\n");
+    const csvData = "data:text/csv;charset=utf-8," + encodeURIComponent(csvHeader + csvRows);
+    const link = document.createElement("a");
+    link.setAttribute("href", csvData);
+    link.setAttribute("download", `yoklama_${sessionInfo.sessionId || Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setMsg("Yoklama indirildi.");
   };
 
   const handleRegenerateQr = async () => {
@@ -79,7 +112,11 @@ export default function TeacherPanel() {
       const fullQrUrl = createQrUrl(parsedPayload, window.location.href);
 
       setQrPayload(parsedPayload);
-      setSessionInfo({ sessionId: res.sessionId || res.id, expiresAt: res.expiresAt });
+      setSessionInfo(prev => ({
+        ...prev,
+        sessionId: res.sessionId || res.id,
+        expiresAt: res.expiresAt,
+      }));
       setStudentQrUrl(fullQrUrl);
       setMsg("QR yenilendi. Yoklama listesi korunur.");
     } catch (err) {
@@ -130,8 +167,32 @@ export default function TeacherPanel() {
     <div className="teacher-panel-container">
       <h2 className="panel-title">Öğretmen Paneli</h2>
 
-      <div className="control-group">
-        <label htmlFor="durationInput">Oturum Süresi (dakika)</label>
+      <div className="control-group vertical">
+        <label htmlFor="teacherNameInput">Öğretmen Adı-Soyadı:</label>
+        <input
+          id="teacherNameInput"
+          type="text"
+          value={teacherName}
+          onChange={(e) => setTeacherName(e.target.value)}
+          placeholder="Örn: Mehmet Yılmaz"
+          className="text-input"
+        />
+      </div>
+
+      <div className="control-group vertical">
+        <label htmlFor="courseNameInput">Ders Adı:</label>
+        <input
+          id="courseNameInput"
+          type="text"
+          value={courseName}
+          onChange={(e) => setCourseName(e.target.value)}
+          placeholder="Örn: Matematik"
+          className="text-input"
+        />
+      </div>
+
+      <div className="control-group vertical">
+        <label htmlFor="durationInput">Oturum Süresi (dakika):</label>
         <input
           id="durationInput"
           type="number"
@@ -140,35 +201,30 @@ export default function TeacherPanel() {
           min={1}
           className="duration-input"
         />
-        <button
-          onClick={handleCreate}
-          disabled={loading}
-          className="btn btn-create"
-        >
+      </div>
+
+      {/* OTURUM OLUŞTUR + YOKLAMAYI İNDİR + ÖĞRENCİ EKLE */}
+      <div className="session-create-buttons">
+        <button onClick={handleCreate} disabled={loading} className="btn-create-session">
           {loading ? "Oluşturuluyor..." : "Oturum Oluştur"}
+        </button>
+        <button onClick={handleDownloadAttendance} disabled={!attendance.length} className="btn-download-session">
+          Yoklamayı İndir
+        </button>
+        {/* Örnek Öğrenci Ekle Butonu */}
+        <button className="btn-add-student">
+          Öğrenci Ekle
         </button>
       </div>
 
-      <div className="button-group">
-        <button
-          onClick={handleShowAttendance}
-          disabled={loading || !sessionInfo}
-          className="btn btn-show"
-        >
+      <div className="session-action-buttons">
+        <button onClick={handleShowAttendance} disabled={loading || !sessionInfo} className="btn-show">
           Yoklamayı Göster
         </button>
-        <button
-          onClick={handleRegenerateQr}
-          disabled={loading || !sessionInfo}
-          className="btn btn-renew"
-        >
+        <button onClick={handleRegenerateQr} disabled={loading || !sessionInfo} className="btn-renew">
           QR Yenile
         </button>
-        <button
-          onClick={handleClearAttendance}
-          disabled={loading || !sessionInfo}
-          className="btn btn-clear"
-        >
+        <button onClick={handleClearAttendance} disabled={loading || !sessionInfo} className="btn-clear">
           Yoklamayı Sıfırla
         </button>
       </div>
@@ -179,6 +235,8 @@ export default function TeacherPanel() {
         <div className="session-details">
           <p><strong>Session ID:</strong> {sessionInfo.sessionId}</p>
           <p><strong>Sona Erme Zamanı:</strong> {formatExpiry(sessionInfo.expiresAt)}</p>
+          <p><strong>Öğretmen:</strong> {sessionInfo.teacherName || teacherName}</p>
+          <p><strong>Ders:</strong> {sessionInfo.courseName || courseName}</p>
         </div>
       )}
 
@@ -188,14 +246,8 @@ export default function TeacherPanel() {
           <div style={{ width: 260, height: 260 }}>
             <QRCodeCanvas value={String(studentQrUrl)} size={256} />
           </div>
-
           <p className="qr-label"><strong>QR İçeriği (Yönlendirme URL’i):</strong></p>
-          <textarea
-            readOnly
-            rows={3}
-            value={studentQrUrl}
-            className="qr-url-textarea"
-          />
+          <textarea readOnly rows={3} value={studentQrUrl} className="qr-url-textarea" />
         </div>
       )}
 
@@ -205,7 +257,7 @@ export default function TeacherPanel() {
           <ul className="attendance-list">
             {attendance.map((s, index) => (
               <li key={s.id || s._id || index} className="attendance-item">
-                {s.name || s.id} {s.timestamp ? ` - (${new Date(s.timestamp).toLocaleTimeString()})` : ''}
+                {s.name || s.id} {s.timestamp ? ` - (${new Date(s.timestamp).toLocaleTimeString()})` : ""}
               </li>
             ))}
           </ul>

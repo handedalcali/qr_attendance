@@ -1,10 +1,10 @@
 /* ----------------------------------------------------- */
-/* 1. GLOBAL RESET AND BASE LAYOUT (Tüm Uygulama İçin)  */
+/* 1. GLOBAL RESET AND BASE LAYOUT (Tüm Uygulama İçin) */
 /* ----------------------------------------------------- */
 body {
     margin: 0;
     min-height: 100vh;
-    background-color: #f4f4f4; /* Açık gri arka plan */
+    background-color: #f4f4f4;
     font-family: Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -17,14 +17,14 @@ body {
 }
 
 /* ------------------------------------- */
-/* 2. HEADER STYLES (App.js)             */
+/* 2. HEADER STYLES (App.js)             */
 /* ------------------------------------- */
 .App-header {
-    background-color: #343a40; /* Koyu gri/siyah */
+    background-color: #343a40;
     padding: 15px 20px;
     color: white;
     text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .App-header h1 {
@@ -38,18 +38,17 @@ body {
 }
 
 /* ------------------------------------- */
-/* 3. MAIN CONTENT AREA                  */
+/* 3. MAIN CONTENT AREA                  */
 /* ------------------------------------- */
 .App-main {
-    flex-grow: 1; /* İçeriğin dikeyde yer kaplamasını sağlar */
+    flex-grow: 1;
     padding: 20px;
     background-color: #f4f4f4;
 }
 
 /* ----------------------------------------------------- */
-/* 4. HOME PAGE STYLES (HomePage Component)              */
+/* 4. HOME PAGE STYLES (HomePage Component)             */
 /* ----------------------------------------------------- */
-
 .homepage-container {
     padding: 40px;
     max-width: 400px;
@@ -80,7 +79,7 @@ body {
 }
 
 .teacher-link {
-    background-color: #ffc107; /* Sarı */
+    background-color: #ffc107;
     color: #343a40;
 }
 
@@ -89,7 +88,7 @@ body {
 }
 
 .student-link {
-    background-color: #17a2b8; /* Mavi/Cyan */
+    background-color: #17a2b8;
     color: white;
 }
 
@@ -98,22 +97,21 @@ body {
 }
 
 /* ----------------------------------------------------- */
-/* 5. SUCCESS PAGE STYLES (SuccessPage Component)        */
+/* 5. SUCCESS PAGE STYLES (SuccessPage Component)       */
 /* ----------------------------------------------------- */
-
 .success-container {
     padding: 40px;
     text-align: center;
     max-width: 500px;
     margin: 50px auto;
-    border: 2px solid #28a745; /* Yeşil kenarlık */
+    border: 2px solid #28a745;
     border-radius: 8px;
-    background-color: #e9f7ef; /* Açık yeşil arka plan */
+    background-color: #e9f7ef;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .success-title {
-    color: #28a745; /* Yeşil metin */
+    color: #28a745;
     margin-bottom: 15px;
 }
 
@@ -142,10 +140,8 @@ body {
 }
 
 /* ----------------------------------------------------- */
-/* 6. TEACHER & STUDENT PANEL STYLES (Bileşen Bağımlı)   */
+/* 6. TEACHER & STUDENT PANEL STYLES (Bileşen Bağımlı) */
 /* ----------------------------------------------------- */
-
-/* TEACHER PANEL STYLES */
 .teacher-panel-container {
     max-width: 700px;
     margin: 20px auto;
@@ -164,68 +160,78 @@ body {
     padding-bottom: 10px;
 }
 
-.control-group, .button-group {
+/* --- CONTROL GROUP: Alt Alta Label + Input --- */
+.control-group {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    flex-direction: column;
     margin-bottom: 20px;
 }
 
-.control-label {
+.control-group label {
     font-weight: bold;
-    min-width: 150px;
+    margin-bottom: 5px;
+}
+
+.text-input, .common-input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: #fff;
+    text-align: left;
+}
+
+.text-input::placeholder, .common-input::placeholder {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.text-input:focus, .common-input:focus {
+    border-color: #007bff;
+    outline: none;
 }
 
 .duration-input {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: 80px;
+    width: 100px;
     text-align: center;
 }
 
+/* --- BUTTON GROUP --- */
+.button-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
 .btn {
+    flex: 1 1 auto;
     padding: 10px 15px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.2s, opacity 0.2s;
-    white-space: nowrap; /* Buton içeriğinin tek satırda kalmasını sağlar */
+    white-space: nowrap;
 }
 
-.btn-create {
-    background-color: #28a745;
-    color: white;
-}
-.btn-create:hover {
-    background-color: #1e7e34;
-}
+.btn-create { background-color: #28a745; color: white; }
+.btn-create:hover { background-color: #1e7e34; }
 
-.btn-show {
-    background-color: #007bff;
-    color: white;
-}
-.btn-show:hover {
-    background-color: #0056b3;
-}
+.btn-show { background-color: #007bff; color: white; }
+.btn-show:hover { background-color: #0056b3; }
 
-.btn-renew {
-    background-color: #ffc107;
-    color: #343a40;
-}
-.btn-renew:hover {
-    background-color: #e0a800;
-}
+.btn-renew { background-color: #ffc107; color: #343a40; }
+.btn-renew:hover { background-color: #e0a800; }
 
-.btn-clear {
-    background-color: #dc3545;
-    color: white;
-}
-.btn-clear:hover {
-    background-color: #bd2130;
-}
+.btn-clear { background-color: #dc3545; color: white; }
+.btn-clear:hover { background-color: #bd2130; }
 
 .btn[disabled], .btn-disabled {
     opacity: 0.6;
@@ -240,11 +246,11 @@ body {
     background-color: #fff3cd;
 }
 
-/* --- QR container: merkezi hizalama ve responsive canvas --- */
+/* QR container */
 .qr-container {
     display: flex;
     flex-direction: column;
-    align-items: center; /* yatay ortala */
+    align-items: center;
     justify-content: center;
     text-align: center;
     margin: 25px 0;
@@ -252,18 +258,6 @@ body {
     padding: 15px;
     border-radius: 8px;
     gap: 12px;
-}
-
-.qr-image {
-    width: 200px;
-    height: 200px;
-    border: 5px solid white;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    margin-top: 10px;
-}
-
-.qr-payload-url {
-    margin-top: 15px;
 }
 
 .qr-url-textarea {
@@ -311,7 +305,6 @@ body {
     text-align: center;
     font-weight: bold;
 }
-
 
 /* STUDENT SCANNER STYLES */
 .student-scanner-container {
@@ -375,23 +368,119 @@ body {
     margin-bottom: 15px;
 }
 
-.btn-success {
-    background-color: #28a745;
+.btn-success { background-color: #28a745; }
+.btn-danger { background-color: #dc3545; }
+.btn-primary { background-color: #007bff; }
+
+.scanner-button:hover:not([disabled]) { opacity: 0.9; }
+.scanner-button.btn-disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ----------------------------------------------------- */
+/* 7. RESPONSIVE SETTINGS                                 */
+/* ----------------------------------------------------- */
+@media (max-width: 768px) {
+    .teacher-panel-container, .student-scanner-container, .homepage-container {
+        padding: 20px;
+        margin: 30px 15px;
+    }
+
+    .button-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .duration-input {
+        width: 100%;
+    }
 }
 
-.btn-danger {
-    background-color: #dc3545;
+/* ----------------------------------------------------- */
+/* 8. OTURUM OLUŞTURMA INPUT + BUTON DÜZENLEMESİ      */
+/* ----------------------------------------------------- */
+.session-create-group {
+    display: flex;
+    flex-direction: column; /* Üst üste */
+    align-items: center;    /* Ortalanmış */
+    gap: 15px;              /* Input ve buton arası mesafe */
+    margin-bottom: 20px;
+    width: 100%;
 }
 
-.btn-primary {
-    background-color: #007bff;
+.session-create-group .duration-input {
+    width: 100%; /* Tam satır genişliği */
+    max-width: 400px; /* Opsiyonel: maksimum genişlik */
 }
 
-.scanner-button:hover:not([disabled]) {
-    opacity: 0.9;
+/* Buton grubu: Oturum Oluştur + Yoklamayı İndir + Öğrenci Ekle */
+.session-create-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 15px;
 }
 
-.scanner-button.btn-disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+/* İlk üç buton alt satırdaki butonlarla tamamen eşit */
+.session-create-buttons .btn-create-session,
+.session-create-buttons .btn-download-session,
+.session-create-buttons .btn-add-student {
+    flex: 1 1 calc(33.333% - 10px); 
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    white-space: nowrap;
+}
+
+.btn-create-session { background-color: #28a745; color: white; }
+.btn-create-session:hover { background-color: #1e7e34; }
+
+.btn-download-session { background-color: #007bff; color: white; }
+.btn-download-session:hover { background-color: #0056b3; }
+
+.btn-add-student { background-color: #ffc107; color: #343a40; }
+.btn-add-student:hover { background-color: #e0a800; }
+
+/* Alt satır: Yoklamayı Göster, QR Yenile, Yoklamayı Sıfırla */
+.session-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.session-action-buttons .btn-show,
+.session-action-buttons .btn-renew,
+.session-action-buttons .btn-clear {
+    flex: 1 1 calc(33.333% - 10px);
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s, opacity 0.2s;
+    white-space: nowrap;
+}
+
+/* Responsive ayarlar */
+@media (max-width: 768px) {
+    .session-create-buttons,
+    .session-action-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .session-create-buttons .btn-create-session,
+    .session-create-buttons .btn-download-session,
+    .session-create-buttons .btn-add-student,
+    .session-action-buttons .btn-show,
+    .session-action-buttons .btn-renew,
+    .session-action-buttons .btn-clear {
+        width: 100%;
+        max-width: 400px;
+    }
 }

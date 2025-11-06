@@ -1,3 +1,4 @@
+// src/controllers/sessionController.js
 const Session = require('../models/Session');
 const Attendance = require('../models/Attendance');
 const crypto = require('crypto');
@@ -10,11 +11,14 @@ function genSessionId() {
 /**
  * Yeni oturum oluşturur
  * POST /api/sessions
- * body: { durationMinutes }
+ * body: { durationMinutes, createdBy, courseName }
  */
 exports.createSession = async (req, res) => {
     try {
         const durationMinutes = Number(req.body.durationMinutes) || 10;
+        const createdBy = req.body.createdBy ? String(req.body.createdBy).trim() : (req.body.createdBy || '');
+        const courseName = req.body.courseName ? String(req.body.courseName).trim() : (req.body.courseName || '');
+
         const sessionId = genSessionId();
         const startedAt = new Date();
         const expiresAt = new Date(startedAt.getTime() + durationMinutes * 60000);
@@ -22,68 +26,29 @@ exports.createSession = async (req, res) => {
         const payload = `${sessionId}|${expiresAt.getTime()}`;
         const sig = sign(payload);
 
-        // QR text (JSON) oluşturuluyor, artık backend image QR üretilmiyor
         const rawQrText = JSON.stringify({ sessionId, expiresAt: expiresAt.getTime(), sig });
 
-        await Session.create({ sessionId, startedAt, expiresAt, students: [] });
+        await Session.create({ sessionId, createdBy, courseName, startedAt, expiresAt, students: [] });
 
-        return res.json({ sessionId, expiresAt: expiresAt.getTime(), qrText: rawQrText });
+        return res.json({ sessionId, expiresAt: expiresAt.getTime(), qrText: rawQrText, createdBy, courseName });
     } catch (err) {
         console.error('createSession error', err);
         return res.status(500).json({ error: 'Oturum oluşturulamadı' });
     }
 };
 
-/**
- * Oturumdaki öğrencileri listele
- * GET /api/sessions/:sessionId/students
- *
- * -> Öncelikle Attendance koleksiyonundan çek (studentId, studentName, timestamp)
- * -> Eğer Attendance boşsa fallback olarak Session.students dizisini döndür
- * -> Her iki durumda da frontend'in beklediği { id, name, timestamp } formatını döndür
- */
 exports.getAttendance = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        if (!sessionId) return res.status(400).json({ error: 'sessionId eksik.' });
-
-        // 1) Attendance koleksiyonundan kayıtları çek
-        const attendances = await Attendance.find({ sessionId })
-          .sort({ timestamp: 1 })
-          .select('studentId studentName timestamp -_id')
-          .lean();
-
-        if (attendances && attendances.length > 0) {
-            const out = attendances.map(a => ({
-                id: a.studentId,
-                name: a.studentName || a.studentId,
-                timestamp: a.timestamp
-            }));
-            return res.json(out);
-        }
-
-        // 2) Fallback: Session.students içeriğini kullan
-        const session = await Session.findOne({ sessionId }).lean();
+        const session = await Session.findOne({ sessionId });
         if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
-
-        const sessionStudents = Array.isArray(session.students)
-            ? session.students.map(s => ({
-                id: s.id,
-                name: s.name || s.id,
-                timestamp: s.timestamp
-            }))
-            : [];
-
-        return res.json(sessionStudents);
+        return res.json(session.students || []);
     } catch (err) {
         console.error('getAttendance error', err);
         return res.status(500).json({ error: 'Öğrenci listesi alınamadı' });
     }
 };
 
-/**
- * Mevcut bir session için yeni QR (yeni expiry & sig) üretir.
- */
 exports.regenerateQr = async (req, res) => {
     try {
         const { sessionId } = req.params;
@@ -110,20 +75,15 @@ exports.regenerateQr = async (req, res) => {
     }
 };
 
-/**
- * Yoklama listesini temizle
- */
 exports.clearAttendance = async (req, res) => {
     try {
         const { sessionId } = req.params;
         const session = await Session.findOne({ sessionId });
         if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
 
-        // session.students boşalt
         session.students = [];
         await session.save();
 
-        // Attendance collection'dan sil
         await Attendance.deleteMany({ sessionId });
 
         return res.json({ ok: true, message: 'Yoklama listesi sıfırlandı.' });
