@@ -6,31 +6,29 @@ const { markAttendance } = require('../controllers/attendController');
 /**
  * Bu middleware POST /api/attend istek gövdesini normalize eder.
  * Amaç: frontend farklı formatlarda (sessionId doğrudan, qrPayload içinde, veya qrPayload string)
- * gönderse bile controller'a her zaman { sessionId, studentId } olarak iletmektir.
+ * gönderse bile controller'a her zaman { sessionId, studentId, name } olarak iletmektir.
  */
 router.post('/', (req, res, next) => {
   try {
     const body = req.body || {};
-    let { sessionId, studentId, qrPayload } = body;
+    let { sessionId, studentId, name, qrPayload } = body;
 
     // Eğer öğrenci kimliği root body içinde değilse alt alanları kontrol et (esnek)
     if (!studentId && body.student) studentId = body.student;
 
     // Eğer sessionId yoksa qrPayload içinden çıkarmaya çalış
     if (!sessionId && qrPayload) {
-      // qrPayload bazen object, bazen JSON-string, bazen URL encoded payload olabilir
       if (typeof qrPayload === 'object') {
         sessionId = qrPayload.sessionId || qrPayload.id || qrPayload._id;
+        if (!name && qrPayload.name) name = qrPayload.name; // name varsa al
       } else if (typeof qrPayload === 'string') {
         const s = qrPayload.trim();
-        // JSON string
         if (s.startsWith('{') && s.endsWith('}')) {
           try {
             const parsed = JSON.parse(s);
             sessionId = parsed.sessionId || parsed.id || parsed._id;
-          } catch (e) {
-            // ignore
-          }
+            if (!name && parsed.name) name = parsed.name;
+          } catch (e) {}
         } else if (s.includes('payload=')) {
           try {
             const url = new URL(s);
@@ -38,29 +36,23 @@ router.post('/', (req, res, next) => {
             if (p) {
               const parsed = JSON.parse(decodeURIComponent(p));
               sessionId = parsed.sessionId || parsed.id || parsed._id;
+              if (!name && parsed.name) name = parsed.name;
             }
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) {}
         } else {
-          // fallback: qrPayload itself olabilir sessionId string
           sessionId = s;
         }
       }
     }
 
-    // Eğer body doğrudan sessionId gönderdi ise kullan
     if (!sessionId && body.session) sessionId = body.session;
 
     // Son kontroller
-    if (!sessionId || !studentId) {
-      // Hata mesajını controller'da da görmek isteyebilirsin ama burada erken dönebiliriz
-      return res.status(400).json({ error: 'sessionId veya studentId eksik' });
+    if (!sessionId || !studentId || !name) {
+      return res.status(400).json({ error: 'sessionId, studentId veya name eksik' });
     }
 
-    // Yeniden yaz: controller'un req.body.sessionId ve req.body.studentId beklediğini varsayıyoruz
-    req.body = { sessionId, studentId };
-
+    req.body = { sessionId, studentId, name };
     return next();
   } catch (err) {
     console.error('attend route normalize error:', err);

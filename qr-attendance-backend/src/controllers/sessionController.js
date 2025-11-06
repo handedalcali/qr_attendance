@@ -1,4 +1,3 @@
-// src/controllers/sessionController.js
 const Session = require('../models/Session');
 const Attendance = require('../models/Attendance');
 const crypto = require('crypto');
@@ -38,13 +37,44 @@ exports.createSession = async (req, res) => {
 /**
  * Oturumdaki öğrencileri listele
  * GET /api/sessions/:sessionId/students
+ *
+ * -> Öncelikle Attendance koleksiyonundan çek (studentId, studentName, timestamp)
+ * -> Eğer Attendance boşsa fallback olarak Session.students dizisini döndür
+ * -> Her iki durumda da frontend'in beklediği { id, name, timestamp } formatını döndür
  */
 exports.getAttendance = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const session = await Session.findOne({ sessionId });
+        if (!sessionId) return res.status(400).json({ error: 'sessionId eksik.' });
+
+        // 1) Attendance koleksiyonundan kayıtları çek
+        const attendances = await Attendance.find({ sessionId })
+          .sort({ timestamp: 1 })
+          .select('studentId studentName timestamp -_id')
+          .lean();
+
+        if (attendances && attendances.length > 0) {
+            const out = attendances.map(a => ({
+                id: a.studentId,
+                name: a.studentName || a.studentId,
+                timestamp: a.timestamp
+            }));
+            return res.json(out);
+        }
+
+        // 2) Fallback: Session.students içeriğini kullan
+        const session = await Session.findOne({ sessionId }).lean();
         if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
-        return res.json(session.students || []);
+
+        const sessionStudents = Array.isArray(session.students)
+            ? session.students.map(s => ({
+                id: s.id,
+                name: s.name || s.id,
+                timestamp: s.timestamp
+            }))
+            : [];
+
+        return res.json(sessionStudents);
     } catch (err) {
         console.error('getAttendance error', err);
         return res.status(500).json({ error: 'Öğrenci listesi alınamadı' });

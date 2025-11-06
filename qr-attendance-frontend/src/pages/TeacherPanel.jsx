@@ -1,27 +1,14 @@
-// src/pages/TeacherPanel.jsx
 import React, { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { createSession, getAttendance, regenerateQr, clearAttendance } from "../api";
 
 function createQrUrl(payload, currentUrl) {
   if (!payload) return "";
-  let obj;
-  if (typeof payload === "string") {
-    try { obj = JSON.parse(decodeURIComponent(payload)); } catch { obj = { sessionId: payload }; }
-  } else obj = payload;
-  const sessionId = obj?.sessionId || obj?.id || obj?._id;
-  if (!sessionId) {
-    const raw = encodeURIComponent(JSON.stringify(obj));
-    const url = new URL(currentUrl);
-    url.pathname = "/student";
-    url.search = "";
-    url.searchParams.set("payload", raw);
-    return url.toString();
-  }
   const url = new URL(currentUrl);
   url.pathname = "/student";
   url.search = "";
-  url.searchParams.set("payload", encodeURIComponent(JSON.stringify({ sessionId })));
+  // Tüm payload'u encode et (sessionId, expiresAt, sig)
+  url.searchParams.set("payload", encodeURIComponent(JSON.stringify(payload)));
   return url.toString();
 }
 
@@ -54,14 +41,17 @@ export default function TeacherPanel() {
   }, [sessionInfo]);
 
   const handleCreate = async () => {
-    setLoading(true); setMsg(""); setSessionInfo(null); setAttendance([]);
+    setLoading(true);
+    setMsg("");
+    setSessionInfo(null);
+    setAttendance([]);
     try {
       const res = await createSession(Number(duration || 10));
-      let parsedPayload = null;
-      if (res?.qrText) {
-        try { parsedPayload = JSON.parse(res.qrText); } catch { parsedPayload = res.qrText; }
-      } else parsedPayload = { sessionId: res.sessionId || res.id || res._id };
+      const parsedPayload = res.qrText
+        ? JSON.parse(res.qrText)
+        : { sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, sig: res.sig };
       const fullQrUrl = createQrUrl(parsedPayload, window.location.href);
+
       setSessionInfo({ sessionId: res.sessionId || res.id, expiresAt: res.expiresAt });
       setQrPayload(parsedPayload);
       setStudentQrUrl(fullQrUrl);
@@ -69,19 +59,25 @@ export default function TeacherPanel() {
     } catch (err) {
       console.error(err);
       setMsg("Oturum oluşturulamadı: " + (err?.response?.data?.error || err?.message || "Bilinmeyen hata"));
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegenerateQr = async () => {
-    if (!sessionInfo?.sessionId) { setMsg("Önce bir oturum oluşturun."); return; }
-    setLoading(true); setMsg("");
+    if (!sessionInfo?.sessionId) {
+      setMsg("Önce bir oturum oluşturun.");
+      return;
+    }
+    setLoading(true);
+    setMsg("");
     try {
       const res = await regenerateQr(sessionInfo.sessionId, Number(duration || 10));
-      let parsedPayload = null;
-      if (res?.qrText) {
-        try { parsedPayload = JSON.parse(res.qrText); } catch { parsedPayload = res.qrText; }
-      } else parsedPayload = { sessionId: res.sessionId || res.id };
+      const parsedPayload = res.qrText
+        ? JSON.parse(res.qrText)
+        : { sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, sig: res.sig };
       const fullQrUrl = createQrUrl(parsedPayload, window.location.href);
+
       setQrPayload(parsedPayload);
       setSessionInfo({ sessionId: res.sessionId || res.id, expiresAt: res.expiresAt });
       setStudentQrUrl(fullQrUrl);
@@ -89,12 +85,15 @@ export default function TeacherPanel() {
     } catch (err) {
       console.error(err);
       setMsg("QR yenilenemedi: " + (err?.response?.data?.error || err?.message));
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleShowAttendance = async () => {
     if (!sessionInfo?.sessionId) return;
-    setLoading(true); setMsg("");
+    setLoading(true);
+    setMsg("");
     try {
       const data = await getAttendance(sessionInfo.sessionId);
       setAttendance(data || []);
@@ -102,13 +101,19 @@ export default function TeacherPanel() {
     } catch (err) {
       console.error(err);
       setMsg("Yoklama alınamadı: " + (err?.response?.data?.error || err?.message));
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClearAttendance = async () => {
-    if (!sessionInfo?.sessionId) { setMsg("Önce bir oturum oluşturun."); return; }
+    if (!sessionInfo?.sessionId) {
+      setMsg("Önce bir oturum oluşturun.");
+      return;
+    }
     if (!window.confirm("Yoklama listesini sıfırlamak istediğine emin misin?")) return;
-    setLoading(true); setMsg("");
+    setLoading(true);
+    setMsg("");
     try {
       const res = await clearAttendance(sessionInfo.sessionId);
       setAttendance([]);
@@ -116,7 +121,9 @@ export default function TeacherPanel() {
     } catch (err) {
       console.error(err);
       setMsg("Yoklama sıfırlanamadı: " + (err?.response?.data?.error || err?.message));
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -133,15 +140,37 @@ export default function TeacherPanel() {
           min={1}
           className="duration-input"
         />
-        <button onClick={handleCreate} disabled={loading} className="btn btn-create">
+        <button
+          onClick={handleCreate}
+          disabled={loading}
+          className="btn btn-create"
+        >
           {loading ? "Oluşturuluyor..." : "Oturum Oluştur"}
         </button>
       </div>
 
       <div className="button-group">
-        <button onClick={handleShowAttendance} disabled={loading || !sessionInfo} className="btn btn-show">Yoklamayı Göster</button>
-        <button onClick={handleRegenerateQr} disabled={loading || !sessionInfo} className="btn btn-renew">QR Yenile</button>
-        <button onClick={handleClearAttendance} disabled={loading || !sessionInfo} className="btn btn-clear">Yoklamayı Sıfırla</button>
+        <button
+          onClick={handleShowAttendance}
+          disabled={loading || !sessionInfo}
+          className="btn btn-show"
+        >
+          Yoklamayı Göster
+        </button>
+        <button
+          onClick={handleRegenerateQr}
+          disabled={loading || !sessionInfo}
+          className="btn btn-renew"
+        >
+          QR Yenile
+        </button>
+        <button
+          onClick={handleClearAttendance}
+          disabled={loading || !sessionInfo}
+          className="btn btn-clear"
+        >
+          Yoklamayı Sıfırla
+        </button>
       </div>
 
       {msg && <p className="message-info">{msg}</p>}
@@ -160,8 +189,13 @@ export default function TeacherPanel() {
             <QRCodeCanvas value={String(studentQrUrl)} size={256} />
           </div>
 
-          <p className="qr-label"><strong>QR İçeriği (Yönlendirme URL'i):</strong></p>
-          <textarea readOnly rows={3} value={studentQrUrl} className="qr-url-textarea" />
+          <p className="qr-label"><strong>QR İçeriği (Yönlendirme URL’i):</strong></p>
+          <textarea
+            readOnly
+            rows={3}
+            value={studentQrUrl}
+            className="qr-url-textarea"
+          />
         </div>
       )}
 
