@@ -1,12 +1,11 @@
 // StudentScanner.js
 import React, { useEffect, useState, useRef } from "react";
 import QrReader from "react-qr-reader";
-import { useLocation, useHistory } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { markAttendance } from "../api";
 
 export default function StudentScanner() {
   const location = useLocation();
-  const history = useHistory();
 
   const [studentId, setStudentId] = useState("");
   const [studentName, setStudentName] = useState("");
@@ -14,10 +13,10 @@ export default function StudentScanner() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const isMountedRef = useRef(true);
 
-  // component mount/unmount kontrolü
   useEffect(() => {
     isMountedRef.current = true;
     const params = new URLSearchParams(location.search);
@@ -36,7 +35,9 @@ export default function StudentScanner() {
         }
       }
     }
-    return () => { isMountedRef.current = false; };
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [location]);
 
   const normalizePayload = (input) => {
@@ -48,23 +49,76 @@ export default function StudentScanner() {
     const s = String(input).trim();
     if (!s) return null;
     if (s.startsWith("{") && s.endsWith("}")) {
-      try { return JSON.parse(s); } catch { }
+      try {
+        return JSON.parse(s);
+      } catch {}
     }
     if (s.includes("payload=")) {
       try {
         const url = new URL(s);
         const p = url.searchParams.get("payload");
         if (p) return JSON.parse(decodeURIComponent(p));
-      } catch { }
+      } catch {}
     }
     return { sessionId: s };
   };
 
+  // İsim normalizasyonu: baş/son boşlukları temizle, çoklu boşlukları tek boşluğa düşür, küçük harfe çevir
+  const normalizeName = (name) => {
+    if (!name && name !== "") return "";
+    return String(name)
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+  };
+
   const handleMark = async (payloadOverride) => {
+    if (success) return;
+
     const payloadToUse = payloadOverride || qrPayload;
-    if (!payloadToUse) { setMessage("QR payload eksik."); return; }
-    if (!studentId) { setMessage("Öğrenci ID girin."); return; }
-    if (!studentName.trim()) { setMessage("İsim Soyisim girin."); return; }
+    if (!payloadToUse) {
+      setMessage("QR payload eksik.");
+      return;
+    }
+    if (!studentId) {
+      setMessage("Öğrenci ID girin.");
+      return;
+    }
+    if (!studentName.trim()) {
+      setMessage("İsim Soyisim girin.");
+      return;
+    }
+
+    // Excel listesinden kontrol: önce ID var mı, sonra isim eşleşiyor mu (case-insensitive)
+    let storedStudents = [];
+    try {
+      storedStudents = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
+    } catch (err) {
+      console.warn("Excel listesi okunamadı:", err);
+      storedStudents = [];
+    }
+
+    const idStr = String(studentId).trim();
+    const foundById = storedStudents.find(s => String(s.id).trim() === idStr);
+
+    if (!foundById) {
+      setMessage("❌ Numaranız listede bulunamadı veya yanlış girdiniz.");
+      return;
+    }
+
+    // İsim kontrolü (büyük/küçük harf duyarsız, fazla boşluk duyarsız)
+    const inputNameNorm = normalizeName(studentName);
+    const storedNameNorm = normalizeName(foundById.name || "");
+    if (!storedNameNorm) {
+      // Eğer listede ad yoksa (kötü formatlı excel) — yine de kabul edebiliriz veya uyarabiliriz.
+      // Burada güvenlik için uyarı veriyoruz:
+      setMessage("❌ Öğrenci adı listede eksik; lütfen öğretmene danışın.");
+      return;
+    }
+    if (inputNameNorm !== storedNameNorm) {
+      setMessage("❌ ID bulundu ama isim eşleşmiyor. Lütfen adınızı doğru girin veya öğretmene danışın.");
+      return;
+    }
 
     const normalized = normalizePayload(payloadToUse);
     if (!normalized || !normalized.sessionId) {
@@ -73,53 +127,43 @@ export default function StudentScanner() {
     }
 
     try {
-      if (isMountedRef.current) setLoading(true);
+      setLoading(true);
       setMessage("");
 
       const res = await markAttendance(
         normalized,
-        String(studentId).trim(),
+        idStr,
         String(studentName).trim()
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
-        if (isMountedRef.current) setMessage("✅ Yoklama başarıyla alındı.");
+        setMessage("✅ Yoklama başarıyla alındı.");
+        setSuccess(true);
 
-        // **Öğrenciyi localStorage'a ekle ve TeacherPanel ile paylaş**
-        const savedStudents = localStorage.getItem("teacher_students_list");
-        const studentsList = savedStudents ? JSON.parse(savedStudents) : [];
-        const exists = studentsList.some(s => s.id === String(studentId).trim());
-        if (!exists) {
-          const newStudent = { id: String(studentId).trim(), name: String(studentName).trim() };
-          studentsList.push(newStudent);
-          localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
+        // localStorage güncelle
+        try {
+          // students listesinde zaten bulunduğu için eklemeye gerek yok ama yine güvence:
+          const studentsList = storedStudents.slice();
+          const exists = studentsList.some(s => String(s.id).trim() === idStr);
+          if (!exists) {
+            studentsList.push({ id: idStr, name: String(studentName).trim() });
+            localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
+          }
+
+          const savedAttendance = localStorage.getItem("teacher_attendance");
+          const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
+          const attendanceExists = attendanceList.some(a => a.studentId === idStr);
+          if (!attendanceExists) {
+            attendanceList.push({ studentId: idStr, name: String(studentName).trim(), timestamp: new Date().toISOString() });
+            localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
+          }
+        } catch (e) {
+          console.warn("LocalStorage güncellenirken hata:", e);
         }
 
-        const savedAttendance = localStorage.getItem("teacher_attendance");
-        const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
-        const attendanceExists = attendanceList.some(a => a.studentId === String(studentId).trim());
-        if (!attendanceExists) {
-          attendanceList.push({ studentId: String(studentId).trim(), name: String(studentName).trim(), timestamp: new Date().toISOString() });
-          localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
-        }
-
-        // Geri yönlendirme
-        const params = new URLSearchParams(location.search);
-        const returnUrl = params.get("returnUrl");
-        if (returnUrl) {
-          const sessionInfoToReturn = {
-            sessionId: normalized.sessionId,
-            expiresAt: normalized.expiresAt || null,
-            sig: normalized.sig || null
-          };
-          const redirectUrl = `${returnUrl}?sessionInfo=${encodeURIComponent(JSON.stringify(sessionInfoToReturn))}`;
-          history.push(redirectUrl);
-          return;
-        }
-
-        history.push(`/yoklama-basarili?sessionId=${encodeURIComponent(normalized.sessionId)}`);
+        return;
       } else {
-        if (isMountedRef.current) setMessage("Hata: " + (res?.error || JSON.stringify(res)));
+        setMessage("Hata: " + (res?.error || JSON.stringify(res)));
       }
     } catch (err) {
       console.error("markAttendance error:", err);
@@ -127,14 +171,14 @@ export default function StudentScanner() {
       const dataErr = err?.response?.data?.error || err?.message || String(err);
 
       if (status === 409) {
-        if (isMountedRef.current) setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
+        setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
       } else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş")) {
-        if (isMountedRef.current) setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
+        setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
       } else {
-        if (isMountedRef.current) setMessage("Sunucu hatası: " + dataErr);
+        setMessage("Sunucu hatası: " + dataErr);
       }
     } finally {
-      if (isMountedRef.current) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -143,6 +187,7 @@ export default function StudentScanner() {
       setQrPayload(data);
       setMessage("QR kodu okundu. Göndermek için ID ve isim girip butona basın.");
       setShowScanner(false);
+      setSuccess(false);
     }
   };
 
@@ -166,6 +211,7 @@ export default function StudentScanner() {
         onChange={(e) => setStudentId(e.target.value.replace(/\D/g, ""))}
         placeholder="Örn: 12345"
         className="scanner-input"
+        disabled={success}
       />
 
       <label htmlFor="studentNameInput" className="input-label">İsim Soyisim:</label>
@@ -176,12 +222,13 @@ export default function StudentScanner() {
         onChange={(e) => setStudentName(e.target.value)}
         placeholder="Örn: Ahmet Yılmaz"
         className="scanner-input"
+        disabled={success}
       />
 
       <button
         onClick={() => setShowScanner(!showScanner)}
         className={`scanner-button ${showScanner ? 'btn-danger' : 'btn-success'}`}
-        disabled={loading}
+        disabled={loading || success}
       >
         {showScanner ? "Tarayıcıyı Kapat" : "QR Kod Tarayıcıyı Başlat (Kamera)"}
       </button>
@@ -206,19 +253,21 @@ export default function StudentScanner() {
         onChange={(e) => setQrPayload(e.target.value)}
         placeholder='QR payload (JSON veya sadece Session ID veya tam URL)'
         className="scanner-textarea"
+        disabled={success}
       />
 
       <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
         <button
           onClick={() => handleMark()}
-          disabled={loading || !studentId || !studentName || !qrPayload}
-          className={`scanner-button btn-primary ${loading || !studentId || !studentName || !qrPayload ? 'btn-disabled' : ''}`}
+          disabled={loading || !studentId || !studentName || !qrPayload || success}
+          className={`scanner-button btn-primary ${loading || !studentId || !studentName || !qrPayload || success ? 'btn-disabled' : ''}`}
         >
-          {loading ? "Gönderiliyor..." : "Yoklamayı Gönder"}
+          {loading ? "Gönderiliyor..." : (success ? "Kaydedildi" : "Yoklamayı Gönder")}
         </button>
       </div>
 
       {message && <p className="message-info" style={{ marginTop: 10 }}>{message}</p>}
+      {success && <p style={{ color: "green", fontWeight: "600" }}>✅ Kaydınız alındı — teşekkürler!</p>}
     </div>
   );
 }

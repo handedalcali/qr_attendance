@@ -7,18 +7,24 @@ import StudentScanner from './pages/StudentScanner';
 
 import './App.css';
 
+// Ana Sayfa
 const HomePage = () => (
   <div className="homepage-container">
     <h2 className="homepage-title">QR Yoklama Sistemi Giriş</h2>
     <div className="homepage-link-group">
-      <Link to="/teacher" className="homepage-link teacher-link">Öğretmen Girişi (Oturum Başlat)</Link>
+      <Link to="/teacher" className="homepage-link teacher-link">
+        Öğretmen Girişi (Oturum Başlat)
+      </Link>
     </div>
     <div className="homepage-link-group">
-      <Link to="/student" className="homepage-link student-link">Öğrenci Girişi (QR Tarama)</Link>
+      <Link to="/student" className="homepage-link student-link">
+        Öğrenci Girişi (QR Tarama)
+      </Link>
     </div>
   </div>
 );
 
+// Başarı Sayfası
 const SuccessPage = () => {
   const location = useLocation();
   const sessionId = new URLSearchParams(location.search).get("sessionId");
@@ -37,6 +43,7 @@ const SuccessPage = () => {
   );
 };
 
+// 404 Sayfası
 const NotFoundPage = () => (
   <div className="error-404-container">
     <h2>Sayfa Bulunamadı (404)</h2>

@@ -1,4 +1,3 @@
-// src/controllers/attendController.js
 const Attendance = require('../models/Attendance');
 const Session = require('../models/Session');
 const { verify } = require('../utils/security');
@@ -18,60 +17,38 @@ function tryParseJson(s) {
 
 exports.markAttendance = async (req, res) => {
   try {
-    console.log('=== /api/attend called ===');
-    console.log('Request body:', req.body);
-
     let { qrPayload, sessionId: sessionIdFromBody, studentId, name } = req.body;
 
-    // normalize studentId
     if (studentId != null) studentId = String(studentId).trim();
-
-    // name zorunlu
-    if (!name || String(name).trim() === "") {
-      return res.status(400).json({ error: 'Öğrenci adı (name) zorunludur. Lütfen isim soyisim girin.' });
-    }
+    if (!name || String(name).trim() === "")
+      return res.status(400).json({ error: 'Öğrenci adı (name) zorunludur.' });
     const studentName = String(name).trim();
 
     let sessionId = sessionIdFromBody;
 
-    // QR payload kontrolü (isteğe bağlı)
     if (qrPayload) {
       const parsed = tryParseJson(qrPayload);
-
-      if (!parsed || !parsed.sessionId || !parsed.expiresAt || !parsed.sig) {
+      if (!parsed || !parsed.sessionId || !parsed.expiresAt || !parsed.sig)
         return res.status(400).json({ error: 'QR kod geçersiz.' });
-      }
 
       if (!sessionId) sessionId = String(parsed.sessionId).trim();
       const payload = `${sessionId}|${parsed.expiresAt}`;
-
-      if (!verify(payload, parsed.sig)) {
-        return res.status(400).json({ error: 'QR kod imza hatası.' });
-      }
-
-      if (Date.now() > Number(parsed.expiresAt)) {
-        return res.status(400).json({ error: 'Oturum süresi dolmuş.' });
-      }
+      if (!verify(payload, parsed.sig)) return res.status(400).json({ error: 'QR kod imza hatası.' });
+      if (Date.now() > Number(parsed.expiresAt)) return res.status(400).json({ error: 'Oturum süresi dolmuş.' });
     }
 
-    // Asgari kontroller
-    if (!sessionId || !studentId) {
+    if (!sessionId || !studentId)
       return res.status(400).json({ error: 'Eksik veri: Oturum kimliği veya öğrenci kimliği eksik.' });
-    }
 
     sessionId = String(sessionId).trim();
-
-    // Oturumu bul ve süresini kontrol et
     const session = await Session.findOne({ sessionId });
     if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
-    if (session.expiresAt && Date.now() > new Date(session.expiresAt).getTime()) {
+    if (session.expiresAt && Date.now() > new Date(session.expiresAt).getTime())
       return res.status(400).json({ error: 'Oturum süresi dolmuş veya geçersiz.' });
-    }
 
     if (!Array.isArray(session.students)) session.students = [];
 
     try {
-      // Attendance kaydı oluştur (unique index var)
       await Attendance.create({
         sessionId,
         studentId,
@@ -79,13 +56,11 @@ exports.markAttendance = async (req, res) => {
         meta: { ip: req.ip, ua: req.get('User-Agent') },
       });
 
-      // Session.students dizisine ekle (yoksa)
       const alreadyInSession = session.students.some(s => String(s.id) === String(studentId));
       if (!alreadyInSession) {
         session.students.push({ id: studentId, name: studentName, timestamp: new Date() });
         await session.save();
       } else {
-        // varsa isim/timestamp güncelle (opsiyonel)
         const idx = session.students.findIndex(s => String(s.id) === String(studentId));
         if (idx > -1) {
           session.students[idx].name = studentName;
@@ -94,13 +69,9 @@ exports.markAttendance = async (req, res) => {
         }
       }
 
-      return res.json({
-        ok: true,
-        message: 'Yoklama başarıyla kaydedildi :)',
-      });
+      return res.json({ ok: true, message: 'Yoklama başarıyla kaydedildi :)' });
     } catch (err) {
       if (err && err.code === 11000) {
-        // duplicate -> zaten attendance var
         const alreadyInSession = session.students.some(s => s.id === studentId);
         if (!alreadyInSession) {
           session.students.push({ id: studentId, name: studentName, timestamp: new Date() });

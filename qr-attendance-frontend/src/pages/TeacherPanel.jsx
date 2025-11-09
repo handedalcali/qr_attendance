@@ -36,10 +36,6 @@ export default function TeacherPanel() {
   const [studentQrUrl, setStudentQrUrl] = useState("");
   const [filter, setFilter] = useState("all");
 
-  // NOT: Başlangıçta otomatik tüm localStorage yüklemesi yapılmıyor
-  // Ancak "student" sayfasından geri döndüğünde (URL'de sessionInfo varsa) aşağıda bu veriler gerektiğinde yüklenecek.
-
-  // localStorage kaydetmeleri (form/students/attendance/qrPayload)
   useEffect(() => {
     localStorage.setItem("teacher_info", JSON.stringify({
       name: teacherName,
@@ -64,17 +60,14 @@ export default function TeacherPanel() {
     }
   }, [qrPayload]);
 
-  // Geri dönüş sonrası student sayfasından gelen session bilgisi (veya student sayfasından döndüğünde korunması gereken stateleri yükle)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const returnedSession = params.get("sessionInfo");
     if (returnedSession) {
       try {
         const sessionObj = JSON.parse(decodeURIComponent(returnedSession));
-        // set session bilgisi (gelen sessionObj içerde sig olmayabilir)
         setSessionInfo(prev => ({ ...prev, ...sessionObj }));
 
-        // Eğer sessionObj sig içermiyorsa (veya qrPayload yoksa), localStorage'da daha önce kaydedilmiş qrPayload'u al
         if (!sessionObj.sig) {
           try {
             const savedPayloadRaw = localStorage.getItem("teacher_qr_payload");
@@ -82,23 +75,18 @@ export default function TeacherPanel() {
               const savedPayload = JSON.parse(savedPayloadRaw);
               if (savedPayload && savedPayload.sessionId === sessionObj.sessionId) {
                 setQrPayload(savedPayload);
-                // sessionInfo'ya sig ekle
                 setSessionInfo(prev => ({ ...prev, sig: savedPayload.sig || prev?.sig }));
-                const fullQrUrl = createQrUrl(savedPayload, window.location.href);
-                setStudentQrUrl(fullQrUrl);
+                setStudentQrUrl(createQrUrl(savedPayload, window.location.href));
               }
             }
           } catch (err) {
             console.warn("teacher_qr_payload okunamadı:", err);
           }
         } else {
-          // sessionObj içinde sig varsa onu kullan
           setQrPayload({ sessionId: sessionObj.sessionId, expiresAt: sessionObj.expiresAt, sig: sessionObj.sig });
-          const fullQrUrl = createQrUrl({ sessionId: sessionObj.sessionId, expiresAt: sessionObj.expiresAt, sig: sessionObj.sig }, window.location.href);
-          setStudentQrUrl(fullQrUrl);
+          setStudentQrUrl(createQrUrl({ sessionId: sessionObj.sessionId, expiresAt: sessionObj.expiresAt, sig: sessionObj.sig }, window.location.href));
         }
 
-        // Öğretmen bilgileri / öğrenci listesi / attendance'ı sadece state boşsa localStorage'dan yükle
         try {
           if (!teacherName) {
             const savedTeacherRaw = localStorage.getItem("teacher_info");
@@ -135,9 +123,8 @@ export default function TeacherPanel() {
         console.error("Geri dönüş session yüklenemedi:", err);
       }
     }
-  }, [location.search]); // tetik: URL param değişince (student'dan dönüş)
+  }, [location.search]);
 
-  // Yoklama çekme ve interval
   useEffect(() => {
     if (!sessionInfo?.sessionId) return;
     const fetchAttendance = async () => {
@@ -189,10 +176,9 @@ export default function TeacherPanel() {
       setQrPayload(parsedPayload);
       setStudentQrUrl(fullQrUrl);
 
-      // parsedPayload'ı localStorage'a kaydet (sig ile geri alınabilmesi için)
       try {
         localStorage.setItem("teacher_qr_payload", JSON.stringify(parsedPayload));
-      } catch (err) { /* ignore */ }
+      } catch (err) { }
 
       setMsg("Oturum oluşturuldu: " + (res.sessionId || res.id || ""));
     } catch (err) {
@@ -261,10 +247,9 @@ export default function TeacherPanel() {
       }));
       setStudentQrUrl(fullQrUrl);
 
-      // kaydet
       try {
         localStorage.setItem("teacher_qr_payload", JSON.stringify(parsedPayload));
-      } catch (err) { /* ignore */ }
+      } catch (err) { }
 
       setMsg("QR yenilendi. Yoklama listesi korunur.");
     } catch (err) {
@@ -338,18 +323,16 @@ export default function TeacherPanel() {
   });
 
   const handleAddStudent = () => {
-    // Burada öncelik: qrPayload (içinde sig varsa) -> sessionInfo + qrPayload.sig -> sessionInfo
+    // **StudentScanner sayfasına yönlendirme eklendi (yeni sekmede açma)**
     let sessionObj = null;
 
     if (qrPayload && qrPayload.sessionId) {
       sessionObj = qrPayload;
     } else if (sessionInfo && sessionInfo.sessionId) {
-      // sessionInfo'ya qrPayload.sig ekleyebiliyorsak ekle
       const sig = qrPayload?.sig || null;
       sessionObj = { ...sessionInfo, sig: sig || sessionInfo.sig || null };
     }
 
-    // Eğer hala sig yoksa, deneyelim localStorage'dan almak:
     if (sessionObj && !sessionObj.sig) {
       try {
         const savedRaw = localStorage.getItem("teacher_qr_payload");
@@ -371,7 +354,10 @@ export default function TeacherPanel() {
 
     const payloadStr = encodeURIComponent(JSON.stringify({ sessionId: sessionObj.sessionId, expiresAt: sessionObj.expiresAt, sig: sessionObj.sig }));
     const sessionStr = `&sessionInfo=${encodeURIComponent(JSON.stringify(sessionObj))}`;
-    history.push(`/student?payload=${payloadStr}&returnUrl=${encodeURIComponent("/teacher")}${sessionStr}`);
+    const newTabUrl = `/student?payload=${payloadStr}&returnUrl=${encodeURIComponent("/teacher")}${sessionStr}`;
+
+    // yeni sekmede aç
+    window.open(newTabUrl, "_blank");
   };
 
   return (

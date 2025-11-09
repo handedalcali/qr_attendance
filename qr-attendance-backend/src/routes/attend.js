@@ -1,12 +1,7 @@
-// src/routes/attend.js
 const express = require('express');
 const router = express.Router();
 const { markAttendance } = require('../controllers/attendController');
 
-/**
- * Normalize middleware:
- * Body farklı formatta gelirse (qrPayload içeren string/obj) sessionId/name/studentId çıkarılır.
- */
 router.post('/', (req, res, next) => {
   try {
     const body = req.body || {};

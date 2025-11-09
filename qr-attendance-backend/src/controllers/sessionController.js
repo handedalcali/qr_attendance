@@ -1,4 +1,3 @@
-// src/controllers/sessionController.js
 const Session = require('../models/Session');
 const Attendance = require('../models/Attendance');
 const crypto = require('crypto');
@@ -8,10 +7,6 @@ function genSessionId() {
   return crypto.randomBytes(6).toString('hex');
 }
 
-/**
- * POST /api/sessions
- * body: { durationMinutes, createdBy, courseName, students (optional) }
- */
 exports.createSession = async (req, res) => {
   try {
     const durationMinutes = Number(req.body.durationMinutes) || 10;
@@ -28,14 +23,7 @@ exports.createSession = async (req, res) => {
 
     const rawQrText = JSON.stringify({ sessionId, expiresAt: expiresAt.getTime(), sig });
 
-    await Session.create({
-      sessionId,
-      createdBy,
-      courseName,
-      startedAt,
-      expiresAt,
-      students,
-    });
+    await Session.create({ sessionId, createdBy, courseName, startedAt, expiresAt, students });
 
     return res.json({ sessionId, expiresAt: expiresAt.getTime(), qrText: rawQrText, createdBy, courseName });
   } catch (err) {
@@ -44,16 +32,12 @@ exports.createSession = async (req, res) => {
   }
 };
 
-/**
- * GET /api/sessions/:sessionId/students
- */
 exports.getAttendance = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const session = await Session.findOne({ sessionId }).lean();
     if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
 
-    // Attendance kayıtlarını çek
     const attendanceRecords = await Attendance.find({ sessionId }).lean();
 
     return res.json({
@@ -104,7 +88,6 @@ exports.clearAttendance = async (req, res) => {
     const session = await Session.findOne({ sessionId });
     if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
 
-    // Attendance kayıtlarını sil
     await Attendance.deleteMany({ sessionId });
 
     return res.json({ ok: true, message: 'Yoklama listesi sıfırlandı.' });
