@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// StudentScanner.js
+import React, { useEffect, useState, useRef } from "react";
 import QrReader from "react-qr-reader";
 import { useLocation, useHistory } from "react-router-dom";
 import { markAttendance } from "../api";
@@ -14,23 +15,30 @@ export default function StudentScanner() {
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
-  // URL param'dan QR payload al
+  const isMountedRef = useRef(true);
+
+  // component mount/unmount kontrolü
   useEffect(() => {
+    isMountedRef.current = true;
     const params = new URLSearchParams(location.search);
     const payloadJson = params.get("payload");
     if (payloadJson) {
       try {
         const parsed = JSON.parse(decodeURIComponent(payloadJson));
-        setQrPayload(parsed);
-        setMessage("QR kodu başarıyla okundu. Lütfen ID ve isim girin.");
+        if (isMountedRef.current) {
+          setQrPayload(parsed);
+          setMessage("QR kodu başarıyla okundu. Lütfen ID ve isim girin.");
+        }
       } catch (e) {
-        setQrPayload(payloadJson);
-        setMessage("QR verisi okunamadı ama manuel deneyebilirsiniz.");
+        if (isMountedRef.current) {
+          setQrPayload(payloadJson);
+          setMessage("QR verisi okunamadı ama manuel deneyebilirsiniz.");
+        }
       }
     }
+    return () => { isMountedRef.current = false; };
   }, [location]);
 
-  // payload normalize et
   const normalizePayload = (input) => {
     if (!input) return null;
     if (typeof input === "object") {
@@ -52,16 +60,11 @@ export default function StudentScanner() {
     return { sessionId: s };
   };
 
-  // Yoklama gönder
   const handleMark = async (payloadOverride) => {
     const payloadToUse = payloadOverride || qrPayload;
-    setMessage("");
-
-    console.log("Gönderilecek veriler:", { studentId, studentName, payloadToUse }); // 🔹 Debug
-
+    if (!payloadToUse) { setMessage("QR payload eksik."); return; }
     if (!studentId) { setMessage("Öğrenci ID girin."); return; }
     if (!studentName.trim()) { setMessage("İsim Soyisim girin."); return; }
-    if (!payloadToUse) { setMessage("QR payload eksik."); return; }
 
     const normalized = normalizePayload(payloadToUse);
     if (!normalized || !normalized.sessionId) {
@@ -69,8 +72,10 @@ export default function StudentScanner() {
       return;
     }
 
-    setLoading(true);
     try {
+      if (isMountedRef.current) setLoading(true);
+      setMessage("");
+
       const res = await markAttendance(
         normalized,
         String(studentId).trim(),
@@ -78,10 +83,43 @@ export default function StudentScanner() {
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
-        setMessage("✅ Yoklama başarıyla alındı.");
+        if (isMountedRef.current) setMessage("✅ Yoklama başarıyla alındı.");
+
+        // **Öğrenciyi localStorage'a ekle ve TeacherPanel ile paylaş**
+        const savedStudents = localStorage.getItem("teacher_students_list");
+        const studentsList = savedStudents ? JSON.parse(savedStudents) : [];
+        const exists = studentsList.some(s => s.id === String(studentId).trim());
+        if (!exists) {
+          const newStudent = { id: String(studentId).trim(), name: String(studentName).trim() };
+          studentsList.push(newStudent);
+          localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
+        }
+
+        const savedAttendance = localStorage.getItem("teacher_attendance");
+        const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
+        const attendanceExists = attendanceList.some(a => a.studentId === String(studentId).trim());
+        if (!attendanceExists) {
+          attendanceList.push({ studentId: String(studentId).trim(), name: String(studentName).trim(), timestamp: new Date().toISOString() });
+          localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
+        }
+
+        // Geri yönlendirme
+        const params = new URLSearchParams(location.search);
+        const returnUrl = params.get("returnUrl");
+        if (returnUrl) {
+          const sessionInfoToReturn = {
+            sessionId: normalized.sessionId,
+            expiresAt: normalized.expiresAt || null,
+            sig: normalized.sig || null
+          };
+          const redirectUrl = `${returnUrl}?sessionInfo=${encodeURIComponent(JSON.stringify(sessionInfoToReturn))}`;
+          history.push(redirectUrl);
+          return;
+        }
+
         history.push(`/yoklama-basarili?sessionId=${encodeURIComponent(normalized.sessionId)}`);
       } else {
-        setMessage("Hata: " + (res?.error || JSON.stringify(res)));
+        if (isMountedRef.current) setMessage("Hata: " + (res?.error || JSON.stringify(res)));
       }
     } catch (err) {
       console.error("markAttendance error:", err);
@@ -89,18 +127,17 @@ export default function StudentScanner() {
       const dataErr = err?.response?.data?.error || err?.message || String(err);
 
       if (status === 409) {
-        setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
+        if (isMountedRef.current) setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
       } else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş")) {
-        setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
+        if (isMountedRef.current) setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
       } else {
-        setMessage("Sunucu hatası: " + dataErr);
+        if (isMountedRef.current) setMessage("Sunucu hatası: " + dataErr);
       }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 
-  // QR tarayıcı
   const handleScan = (data) => {
     if (data) {
       setQrPayload(data);
@@ -110,7 +147,6 @@ export default function StudentScanner() {
   };
 
   const handleError = (err) => {
-    console.error("QR Tarayıcı Hatası:", err);
     if (["NotAllowedError", "NotFoundError"].includes(err?.name)) {
       setMessage("Kamera izni verilmedi veya cihazda kamera bulunamadı.");
     } else {

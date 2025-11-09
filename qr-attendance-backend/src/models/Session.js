@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 
 const SessionSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, unique: true },
-  createdBy: { type: String, default: 'teacher1' }, // öğretmen adı
-  courseName: { type: String, default: '' },         // yeni: ders adı
+  createdBy: { type: String, default: '' }, // öğretmen adı
+  courseName: { type: String, default: '' }, // ders adı
   startedAt: { type: Date, default: Date.now },
   expiresAt: { type: Date, required: true },
   students: [

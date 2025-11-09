@@ -399,16 +399,16 @@ body {
 /* ----------------------------------------------------- */
 .session-create-group {
     display: flex;
-    flex-direction: column; /* Üst üste */
-    align-items: center;    /* Ortalanmış */
-    gap: 15px;              /* Input ve buton arası mesafe */
+    flex-direction: column; 
+    align-items: center;    
+    gap: 15px;              
     margin-bottom: 20px;
     width: 100%;
 }
 
 .session-create-group .duration-input {
-    width: 100%; /* Tam satır genişliği */
-    max-width: 400px; /* Opsiyonel: maksimum genişlik */
+    width: 100%; 
+    max-width: 400px; 
 }
 
 /* Buton grubu: Oturum Oluştur + Yoklamayı İndir + Öğrenci Ekle */
@@ -421,7 +421,6 @@ body {
     margin-bottom: 15px;
 }
 
-/* İlk üç buton alt satırdaki butonlarla tamamen eşit */
 .session-create-buttons .btn-create-session,
 .session-create-buttons .btn-download-session,
 .session-create-buttons .btn-add-student {
@@ -435,14 +434,14 @@ body {
     white-space: nowrap;
 }
 
-.btn-create-session { background-color: #28a745; color: white; }
-.btn-create-session:hover { background-color: #1e7e34; }
+.btn-create-session { background-color: #11ac3f; color: white; }
+.btn-create-session:hover { background-color: hsl(100, 75%, 34%); }
 
-.btn-download-session { background-color: #007bff; color: white; }
-.btn-download-session:hover { background-color: #0056b3; }
+.btn-download-session { background-color: #7e57c2; color: white; }
+.btn-download-session:hover { background-color: #5e35b1; }
 
-.btn-add-student { background-color: #ffc107; color: #343a40; }
-.btn-add-student:hover { background-color: #e0a800; }
+.btn-add-student { background-color: #26a69a; color: white; }
+.btn-add-student:hover { background-color: #00796b; }
 
 /* Alt satır: Yoklamayı Göster, QR Yenile, Yoklamayı Sıfırla */
 .session-action-buttons {
@@ -466,6 +465,15 @@ body {
     white-space: nowrap;
 }
 
+.btn-show { background-color: #42a5f5; color: white; }
+.btn-show:hover { background-color: #1e88e5; }
+
+.btn-renew { background-color: #ffc107; color: #343a40; }
+.btn-renew:hover { background-color: #e0a800; }
+
+.btn-clear { background-color: #ef5350; color: white; }
+.btn-clear:hover { background-color: #e53935; }
+
 /* Responsive ayarlar */
 @media (max-width: 768px) {
     .session-create-buttons,
@@ -483,4 +491,57 @@ body {
         width: 100%;
         max-width: 400px;
     }
+}
+
+/* ----------------------------------------------------- */
+/* 9. ÖZEL FİLTRE VE DOSYA BUTONLARI                   */
+/* ----------------------------------------------------- */
+
+/* Dosya Seç butonu - normal buton ölçüsünde, diğerleriyle uyumlu */
+.file-input-button {
+    padding: 10px 15px;
+    border-radius: 4px;
+    border: none;
+    background-color: #f06292;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.file-input-button:hover {
+    background-color: #c2185b;
+}
+
+/* Filtre butonları: Tümü / Katılanlar / Katılmayanlar */
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.filter-buttons button {
+    flex: 1;
+    padding: 10px 15px;
+    border-radius: 6px;
+    border: 2px solid #343a40;
+    background-color: #f8f9fa;
+    color: #343a40;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.filter-buttons button:hover {
+    background-color: #343a40;
+    color: #fff;
+    border-color: #343a40;
+}
+
+.filter-buttons button.active {
+    background-color: #343a40;
+    color: #ffc107;
+    border-color: #343a40;
 }

@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const AttendanceSchema = new mongoose.Schema({
   sessionId: { type: String, required: true, index: true },
   studentId: { type: String, required: true },
-  studentName: { type: String }, // Yeni alan eklendi
+  studentName: { type: String }, // Yeni alan
   timestamp: { type: Date, default: Date.now },
   meta: { type: Object }
 });
