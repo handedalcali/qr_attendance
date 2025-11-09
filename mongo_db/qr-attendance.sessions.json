@@ -1,0 +1,43 @@
+[{
+  "_id": {
+    "$oid": "69110962ec3d10a61ad45b79"
+  },
+  "sessionId": "c88c032e81b7",
+  "createdBy": "Remzi Başar",
+  "courseName": "SEO",
+  "startedAt": {
+    "$date": "2025-11-09T21:36:34.275Z"
+  },
+  "expiresAt": {
+    "$date": "2025-11-09T21:38:34.275Z"
+  },
+  "students": [
+    {
+      "id": "232211052",
+      "name": "Hande Nur Dalcalı",
+      "timestamp": {
+        "$date": "2025-11-09T21:37:04.478Z"
+      },
+      "_id": {
+        "$oid": "69110980ec3d10a61ad45b8a"
+      }
+    },
+    {
+      "id": "232211063",
+      "name": "Engin Demiray",
+      "timestamp": {
+        "$date": "2025-11-09T21:37:25.234Z"
+      },
+      "_id": {
+        "$oid": "69110995ec3d10a61ad45b98"
+      }
+    }
+  ],
+  "createdAt": {
+    "$date": "2025-11-09T21:36:34.287Z"
+  },
+  "updatedAt": {
+    "$date": "2025-11-09T21:37:25.235Z"
+  },
+  "__v": 2
+}]

@@ -1,0 +1,32 @@
+[{
+  "_id": {
+    "$oid": "69110980ec3d10a61ad45b88"
+  },
+  "sessionId": "c88c032e81b7",
+  "studentId": "232211052",
+  "studentName": "Hande Nur Dalcalı",
+  "meta": {
+    "ip": "::1",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+  },
+  "timestamp": {
+    "$date": "2025-11-09T21:37:04.475Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69110995ec3d10a61ad45b96"
+  },
+  "sessionId": "c88c032e81b7",
+  "studentId": "232211063",
+  "studentName": "Engin Demiray",
+  "meta": {
+    "ip": "::1",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"
+  },
+  "timestamp": {
+    "$date": "2025-11-09T21:37:25.232Z"
+  },
+  "__v": 0
+}]
