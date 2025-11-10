@@ -28,10 +28,11 @@ app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
     "default-src 'self'; " +
-    "img-src 'self' data: https://qr-attendance-5crh.onrender.com https://qr-qttendqnce.onrender.com; " +
+    "img-src 'self' data:; " +  // base64/data: izinleri
     "script-src 'self'; " +
     "style-src 'self' 'unsafe-inline'; " +
-    "connect-src 'self' " + allowedOrigins.join(' ') + ";"
+    // connect-src: kendi sunucu + izin verilen frontend originlerini ekle
+    "connect-src 'self' " + (allowedOrigins.length ? allowedOrigins.join(' ') : "") + ";"
   );
   next();
 });
