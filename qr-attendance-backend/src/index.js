@@ -28,7 +28,7 @@ app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
     "default-src 'self'; " +
-    "img-src 'self' data:; " +
+    "img-src 'self' data: https://qr-attendance-5crh.onrender.com https://qr-qttendqnce.onrender.com; " +
     "script-src 'self'; " +
     "style-src 'self' 'unsafe-inline'; " +
     "connect-src 'self' " + allowedOrigins.join(' ') + ";"
