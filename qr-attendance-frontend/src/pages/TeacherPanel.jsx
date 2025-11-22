@@ -308,7 +308,8 @@ export default function TeacherPanel() {
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const json = XLSX.utils.sheet_to_json(worksheet, { header: ["id", "name"], defval: "" });
-      const students = json.map(r => ({ id: String(r.id).trim(), name: String(r.name).trim() })).filter(r => r.id && r.name);
+      let students = json.map(r => ({ id: String(r.id).trim(), name: String(r.name).trim() })).filter(r => r.id && r.name);
+      students = students.slice(1);
       setStudentsList(students);
       setMsg(`${students.length} öğrenci master listeye yüklendi.`);
     };
