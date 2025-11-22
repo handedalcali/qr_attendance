@@ -33,7 +33,7 @@ export default function StudentCheckin() {
     setLoading(true);
     try {
       // Backend API: markAttendance({ sessionId, studentId, name }) gibi çalışmalı
-      const res = await markAttendance({ sessionId, studentId, name });
+      const res = await markAttendance({ sessionId}, studentId, name );
       if (res?.ok || res?.success || res?.status === 200) {
         setMessage("Yoklama başarıyla kaydedildi. Teşekkürler!");
       } else {
