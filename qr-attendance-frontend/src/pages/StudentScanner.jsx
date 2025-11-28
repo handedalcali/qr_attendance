@@ -4,7 +4,7 @@ import QrReader from "react-qr-reader";
 import { useLocation } from "react-router-dom";
 import { markAttendance } from "../api";
 
-export default function StudentScanner({ studentsList = [] }) {
+export default function StudentScanner({ studentsList = [] }) { // studentsList props olarak geliyor
   const location = useLocation();
 
   const [studentId, setStudentId] = useState("");
@@ -12,7 +12,6 @@ export default function StudentScanner({ studentsList = [] }) {
   const [qrPayload, setQrPayload] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const isMountedRef = useRef(true);
@@ -67,9 +66,7 @@ export default function StudentScanner({ studentsList = [] }) {
     const s = String(input).trim();
     if (!s) return null;
     if (s.startsWith("{") && s.endsWith("}")) {
-      try {
-        return JSON.parse(s);
-      } catch {}
+      try { return JSON.parse(s); } catch {}
     }
     if (s.includes("payload=")) {
       try {
@@ -98,16 +95,12 @@ export default function StudentScanner({ studentsList = [] }) {
       return;
     }
 
-    // ID + isim eşleşmesi kontrolü
-    const studentExists =
-      studentsList.length &&
-      studentsList.find(
-        (s) =>
-          normalizeId(s.id) === normalizeId(studentId) &&
-          normalizeName(s.name) === normalizeName(studentName)
-      );
-
-    if (!studentExists) {
+    // **ID ve isim kontrolü**
+    const studentRecord = studentsList.find(s =>
+      normalizeId(s.id) === normalizeId(studentId) &&
+      normalizeName(s.name) === normalizeName(studentName)
+    );
+    if (!studentRecord) {
       setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
       return;
     }
@@ -118,6 +111,7 @@ export default function StudentScanner({ studentsList = [] }) {
       return;
     }
 
+    // deviceId yoksa otomatik ekle
     if (!normalized.deviceId) {
       normalized.deviceId = "dev_" + Math.random().toString(36).substring(2, 10);
     }
@@ -134,7 +128,7 @@ export default function StudentScanner({ studentsList = [] }) {
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
-        setMessage("✅ Yoklama başarıyla alındı."); // ekstra onay kaldırıldı
+        setMessage("✅ Yoklama başarıyla alındı."); // tek mesaj
         setSuccess(true);
         return;
       } else {
@@ -161,7 +155,6 @@ export default function StudentScanner({ studentsList = [] }) {
     if (data) {
       setQrPayload(data);
       setMessage("QR kodu okundu. Yoklama için hazır.");
-      setShowScanner(false);
       setSuccess(false);
     }
   };
@@ -197,26 +190,6 @@ export default function StudentScanner({ studentsList = [] }) {
         className="scanner-input"
         disabled={success}
       />
-
-      <button
-        onClick={() => setShowScanner(!showScanner)}
-        className={`scanner-button ${showScanner ? "btn-danger" : "btn-success"}`}
-        disabled={loading || success}
-      >
-        {showScanner ? "Tarayıcıyı Kapat" : "QR Kod Tarayıcıyı Başlat (Kamera)"}
-      </button>
-
-      {showScanner && (
-        <div className="qr-reader-frame">
-          <QrReader
-            delay={500}
-            onError={handleError}
-            onScan={handleScan}
-            facingMode="environment"
-            style={{ width: "100%" }}
-          />
-        </div>
-      )}
 
       <label className="input-label">QR Kod Verisi (Manuel Giriş):</label>
       <textarea
