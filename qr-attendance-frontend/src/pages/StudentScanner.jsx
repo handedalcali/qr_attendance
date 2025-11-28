@@ -14,7 +14,6 @@ export default function StudentScanner() {
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [deviceId, setDeviceId] = useState("");
 
   const isMountedRef = useRef(true);
 
@@ -27,7 +26,7 @@ export default function StudentScanner() {
         const parsed = JSON.parse(decodeURIComponent(payloadJson));
         if (isMountedRef.current) {
           setQrPayload(parsed);
-          setMessage("QR kodu başarıyla okundu. Lütfen ID, isim ve cihaz bilgisi girin.");
+          setMessage("QR kodu başarıyla okundu. Yoklama için hazır.");
         }
       } catch (e) {
         if (isMountedRef.current) {
@@ -35,6 +34,8 @@ export default function StudentScanner() {
           setMessage("QR verisi okunamadı ama manuel deneyebilirsiniz.");
         }
       }
+    } else {
+      setMessage("Geçerli bir session yok.");
     }
     return () => {
       isMountedRef.current = false;
@@ -96,14 +97,10 @@ export default function StudentScanner() {
       setMessage("İsim Soyisim girin.");
       return;
     }
-    if (!deviceId.trim()) {
-      setMessage("Cihaz ID girin.");
-      return;
-    }
 
     const normalized = normalizePayload(payloadToUse);
-    if (!normalized || !normalized.sessionId) {
-      setMessage("QR payload geçersiz veya Oturum ID eksik.");
+    if (!normalized || !normalized.sessionId || !normalized.deviceId) {
+      setMessage("QR payload geçersiz veya Oturum/Device ID eksik.");
       return;
     }
 
@@ -114,8 +111,8 @@ export default function StudentScanner() {
       const res = await markAttendance(
         normalized,
         normalizeId(studentId),
-        String(studentName).trim(),
-        String(deviceId).trim()
+        normalizeName(studentName),
+        normalized.deviceId
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
@@ -145,7 +142,7 @@ export default function StudentScanner() {
   const handleScan = (data) => {
     if (data) {
       setQrPayload(data);
-      setMessage("QR kodu okundu. Göndermek için ID, isim ve cihaz bilgisi girin.");
+      setMessage("QR kodu okundu. Yoklama için hazır.");
       setShowScanner(false);
       setSuccess(false);
     }
@@ -183,16 +180,6 @@ export default function StudentScanner() {
         disabled={success}
       />
 
-      <label className="input-label">Cihaz ID (Device ID):</label>
-      <input
-        type="text"
-        value={deviceId}
-        onChange={(e) => setDeviceId(e.target.value)}
-        placeholder="Örn: 1a2b3c4d"
-        className="scanner-input"
-        disabled={success}
-      />
-
       <button
         onClick={() => setShowScanner(!showScanner)}
         className={`scanner-button ${showScanner ? 'btn-danger' : 'btn-success'}`}
@@ -225,8 +212,8 @@ export default function StudentScanner() {
 
       <button
         onClick={() => handleMark()}
-        disabled={loading || !studentId || !studentName || !deviceId || !qrPayload || success}
-        className={`scanner-button btn-primary ${loading || !studentId || !studentName || !deviceId || !qrPayload || success ? 'btn-disabled' : ''}`}
+        disabled={loading || !studentId || !studentName || !qrPayload || success}
+        className={`scanner-button btn-primary ${loading || !studentId || !studentName || !qrPayload || success ? 'btn-disabled' : ''}`}
       >
         {loading ? "Gönderiliyor..." : (success ? "Kaydedildi" : "Yoklamayı Gönder")}
       </button>

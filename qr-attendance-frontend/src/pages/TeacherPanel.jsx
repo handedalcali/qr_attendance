@@ -40,12 +40,9 @@ export default function TeacherPanel() {
   const [studentQrUrl, setStudentQrUrl] = useState("");
   const [filter, setFilter] = useState("all");
 
+  // LocalStorage update
   useEffect(() => {
-    localStorage.setItem("teacher_info", JSON.stringify({
-      name: teacherName,
-      course: courseName,
-      duration
-    }));
+    localStorage.setItem("teacher_info", JSON.stringify({ name: teacherName, course: courseName, duration }));
   }, [teacherName, courseName, duration]);
 
   useEffect(() => {
@@ -58,12 +55,11 @@ export default function TeacherPanel() {
 
   useEffect(() => {
     if (qrPayload) {
-      try {
-        localStorage.setItem("teacher_qr_payload", JSON.stringify(qrPayload));
-      } catch {}
+      try { localStorage.setItem("teacher_qr_payload", JSON.stringify(qrPayload)); } catch {}
     }
   }, [qrPayload]);
 
+  // Load session info from URL
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const returnedSession = params.get("sessionInfo");
@@ -110,13 +106,13 @@ export default function TeacherPanel() {
           const savedAttendance = localStorage.getItem("teacher_attendance");
           if (savedAttendance) setAttendance(JSON.parse(savedAttendance));
         }
-
       } catch (err) {
         console.error("Geri dönüş session yüklenemedi:", err);
       }
     }
   }, [location.search]);
 
+  // Fetch attendance periodically
   useEffect(() => {
     if (!sessionInfo?.sessionId) return;
     const fetchAttendance = async () => {
@@ -143,156 +139,87 @@ export default function TeacherPanel() {
     return () => clearInterval(interval);
   }, [sessionInfo?.sessionId]);
 
+  // Session create
   const handleCreate = async () => {
-    if (!teacherName.trim() || !courseName.trim()) {
-      setMsg("Öğretmen adı ve ders adı zorunludur.");
-      return;
-    }
-    setLoading(true);
-    setMsg("");
-    setSessionInfo(null);
-    setAttendance([]);
+    if (!teacherName.trim() || !courseName.trim()) { setMsg("Öğretmen adı ve ders adı zorunludur."); return; }
+    setLoading(true); setMsg(""); setSessionInfo(null); setAttendance([]);
     try {
       const res = await createSession(Number(duration || 10), teacherName.trim(), courseName.trim());
       const parsedPayload = res.qrText ? JSON.parse(res.qrText) : { sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, sig: res.sig };
       const fullQrUrl = createQrUrl(parsedPayload, window.location.href);
-
-      setSessionInfo({
-        sessionId: res.sessionId || res.id,
-        expiresAt: res.expiresAt,
-        teacherName: teacherName.trim(),
-        courseName: courseName.trim(),
-        sig: parsedPayload.sig || res.sig || null
-      });
-
+      setSessionInfo({ sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, teacherName: teacherName.trim(), courseName: courseName.trim(), sig: parsedPayload.sig || res.sig || null });
       setQrPayload(parsedPayload);
       setStudentQrUrl(fullQrUrl);
-
-      try {
-        localStorage.setItem("teacher_qr_payload", JSON.stringify(parsedPayload));
-      } catch (err) { }
-
+      try { localStorage.setItem("teacher_qr_payload", JSON.stringify(parsedPayload)); } catch {}
       setMsg("Oturum oluşturuldu: " + (res.sessionId || res.id || ""));
     } catch (err) {
       console.error(err);
       setMsg("Oturum oluşturulamadı: " + (err?.response?.data?.error || err?.message || "Bilinmeyen hata"));
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
+  // Download attendance as Excel
   const handleDownloadAttendance = () => {
-    if (!studentsList.length && !attendance.length) {
-      setMsg("İndirilecek öğrenci listesi yok.");
-      return;
-    }
-
+    if (!studentsList.length && !attendance.length) { setMsg("İndirilecek öğrenci listesi yok."); return; }
     const byId = {};
-    attendance.forEach(r => {
-      const sid = r.studentId || r.id || r._id || "";
-      if (sid) byId[String(sid)] = r;
-    });
-
+    attendance.forEach(r => { const sid = r.studentId || r.id || r._id || ""; if (sid) byId[String(sid)] = r; });
     const sheetData = studentsList.map(student => {
       const id = student.id || student.studentId || student.studentNumber || "";
       const record = byId[String(id)];
-      return {
-        "Öğrenci Numarası": id || "",
-        "Öğrenci Adı Soyadı": student.name || "",
-        "Tarih": record && record.timestamp ? new Date(record.timestamp).toLocaleString() : "",
-        "Var / Yok": record && record.timestamp ? "✅" : "❌"
-      };
+      return { "Öğrenci Numarası": id || "", "Öğrenci Adı Soyadı": student.name || "", "Tarih": record && record.timestamp ? new Date(record.timestamp).toLocaleString() : "", "Var / Yok": record && record.timestamp ? "✅" : "❌" };
     });
-
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(sheetData, {
-      header: ["Öğrenci Numarası", "Öğrenci Adı Soyadı", "Tarih", "Var / Yok"]
-    });
+    const ws = XLSX.utils.json_to_sheet(sheetData, { header: ["Öğrenci Numarası", "Öğrenci Adı Soyadı", "Tarih", "Var / Yok"] });
     XLSX.utils.book_append_sheet(wb, ws, "Yoklama");
-
     const safeTeacher = (sessionInfo?.teacherName || teacherName || "Ogretmen").replace(/[^a-z0-9_\-ğüşöçıİĞÜŞÖÇ\s]/gi, "").replace(/\s+/g, "_");
     const safeCourse = (sessionInfo?.courseName || courseName || "Ders").replace(/[^a-z0-9_\-ğüşöçıİĞÜŞÖÇ\s]/gi, "").replace(/\s+/g, "_");
     const fileName = `yoklama_${safeTeacher}_${safeCourse}_${sessionInfo?.sessionId || Date.now()}.xlsx`;
-
     saveAs(new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })]), fileName);
     setMsg("Yoklama Excel olarak indirildi.");
   };
 
+  // QR regenerate
   const handleRegenerateQr = async () => {
-    if (!sessionInfo?.sessionId) {
-      setMsg("Önce bir oturum oluşturun.");
-      return;
-    }
-    setLoading(true);
-    setMsg("");
+    if (!sessionInfo?.sessionId) { setMsg("Önce bir oturum oluşturun."); return; }
+    setLoading(true); setMsg("");
     try {
       const res = await regenerateQr(sessionInfo.sessionId, Number(duration || 10));
       const parsedPayload = res.qrText ? JSON.parse(res.qrText) : { sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, sig: res.sig };
       const fullQrUrl = createQrUrl(parsedPayload, window.location.href);
-
       setQrPayload(parsedPayload);
-      setSessionInfo(prev => ({
-        ...prev,
-        sessionId: res.sessionId || res.id,
-        expiresAt: res.expiresAt,
-        sig: parsedPayload.sig || res.sig || prev?.sig
-      }));
+      setSessionInfo(prev => ({ ...prev, sessionId: res.sessionId || res.id, expiresAt: res.expiresAt, sig: parsedPayload.sig || res.sig || prev?.sig }));
       setStudentQrUrl(fullQrUrl);
-
-      try {
-        localStorage.setItem("teacher_qr_payload", JSON.stringify(parsedPayload));
-      } catch (err) { }
-
+      try { localStorage.setItem("teacher_qr_payload", JSON.stringify(parsedPayload)); } catch {}
       setMsg("QR yenilendi. Yoklama listesi korunur.");
     } catch (err) {
       console.error(err);
       setMsg("QR yenilenemedi: " + (err?.response?.data?.error || err?.message));
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleShowAttendance = async () => {
     if (!sessionInfo?.sessionId) return;
-    setLoading(true);
-    setMsg("");
+    setLoading(true); setMsg("");
     try {
       const data = await getAttendance(sessionInfo.sessionId);
       setAttendance(Array.isArray(data.attendance) ? data.attendance : []);
-      if (!data.attendance?.length && !studentsList?.length) {
-        setMsg("Henüz yoklama alınmamış.");
-      }
-    } catch (err) {
-      console.error(err);
-      setMsg("Yoklama alınamadı: " + (err?.response?.data?.error || err?.message));
-    } finally {
-      setLoading(false);
-    }
+      if (!data.attendance?.length && !studentsList?.length) setMsg("Henüz yoklama alınmamış.");
+    } catch (err) { console.error(err); setMsg("Yoklama alınamadı: " + (err?.response?.data?.error || err?.message)); }
+    finally { setLoading(false); }
   };
 
   const handleClearAttendance = async () => {
-    if (!sessionInfo?.sessionId) {
-      setMsg("Önce bir oturum oluşturun.");
-      return;
-    }
+    if (!sessionInfo?.sessionId) { setMsg("Önce bir oturum oluşturun."); return; }
     if (!window.confirm("Yoklama listesini sıfırlamak istediğine emin misin?")) return;
-    setLoading(true);
-    setMsg("");
-    try {
-      const res = await clearAttendance(sessionInfo.sessionId);
-      setAttendance([]);
-      setMsg(res?.message || "Yoklama listesi sıfırlandı.");
-    } catch (err) {
-      console.error(err);
-      setMsg("Yoklama sıfırlanamadı: " + (err?.response?.data?.error || err?.message));
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setMsg("");
+    try { const res = await clearAttendance(sessionInfo.sessionId); setAttendance([]); setMsg(res?.message || "Yoklama listesi sıfırlandı."); }
+    catch (err) { console.error(err); setMsg("Yoklama sıfırlanamadı: " + (err?.response?.data?.error || err?.message)); }
+    finally { setLoading(false); }
   };
 
+  // Excel upload
   const handleExcelUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = new Uint8Array(evt.target.result);
@@ -315,40 +242,28 @@ export default function TeacherPanel() {
     return true;
   });
 
+  // Add student (updated with deviceId)
   const handleAddStudent = () => {
     let sessionObj = null;
-
-    if (qrPayload && qrPayload.sessionId) {
-      sessionObj = qrPayload;
-    } else if (sessionInfo && sessionInfo.sessionId) {
-      const sig = qrPayload?.sig || null;
-      sessionObj = { ...sessionInfo, sig: sig || sessionInfo.sig || null };
-    }
+    if (qrPayload?.sessionId) sessionObj = qrPayload;
+    else if (sessionInfo?.sessionId) sessionObj = { ...sessionInfo, sig: qrPayload?.sig || sessionInfo.sig || null };
 
     if (sessionObj && !sessionObj.sig) {
       try {
         const savedRaw = localStorage.getItem("teacher_qr_payload");
         if (savedRaw) {
           const saved = JSON.parse(savedRaw);
-          if (saved && saved.sessionId === sessionObj.sessionId && saved.sig) {
-            sessionObj = { ...sessionObj, sig: saved.sig, expiresAt: saved.expiresAt || sessionObj.expiresAt };
-          }
+          if (saved && saved.sessionId === sessionObj.sessionId && saved.sig) sessionObj = { ...sessionObj, sig: saved.sig, expiresAt: saved.expiresAt || sessionObj.expiresAt };
         }
-      } catch (err) {
-        console.warn("teacher_qr_payload okunurken hata:", err);
-      }
+      } catch (err) { console.warn("teacher_qr_payload okunurken hata:", err); }
     }
 
-    if (!sessionObj || !sessionObj.sessionId) {
-      alert("Önce oturum oluşturun veya QR kodu alın.");
-      return;
-    }
+    if (!sessionObj?.sessionId) { alert("Önce oturum oluşturun veya QR kodu alın."); return; }
 
     const payloadWithDevice = { ...sessionObj, deviceId: generateDeviceId() };
     const payloadStr = encodeURIComponent(JSON.stringify(payloadWithDevice));
     const sessionStr = `&sessionInfo=${encodeURIComponent(JSON.stringify(sessionObj))}`;
     const newTabUrl = `/student?payload=${payloadStr}&returnUrl=${encodeURIComponent("/teacher")}${sessionStr}`;
-
     window.open(newTabUrl, "_blank");
   };
 
