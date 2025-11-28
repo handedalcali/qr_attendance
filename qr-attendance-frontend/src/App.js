@@ -24,7 +24,7 @@ const HomePage = () => (
   </div>
 );
 
-// Başarı Sayfası (App.js içinde)
+// Başarı Sayfası
 const SuccessPage = () => {
   const location = useLocation();
   const sessionId = new URLSearchParams(location.search).get("sessionId");

@@ -7,6 +7,14 @@ const api = axios.create({
   timeout: 10000,
 });
 
+// Helper: Device ID ekle
+function addDeviceId(payload) {
+  if (!payload.deviceId) {
+    return { ...payload, deviceId: 'dev_' + Math.random().toString(36).substring(2, 12) };
+  }
+  return payload;
+}
+
 // Oturum Oluşturma
 export async function createSession(durationMinutes = 10, createdBy = "", courseName = "") {
   const body = { durationMinutes };
@@ -15,6 +23,10 @@ export async function createSession(durationMinutes = 10, createdBy = "", course
 
   try {
     const res = await api.post("/sessions", body);
+    if (res.data.qrText) {
+      const parsed = JSON.parse(res.data.qrText);
+      res.data.qrText = JSON.stringify(addDeviceId(parsed));
+    }
     return res.data;
   } catch (err) {
     handleAxiosError(err, "createSession");
@@ -36,9 +48,11 @@ export async function getAttendance(sessionId) {
 export async function markAttendance(normalizedPayload, studentId, studentName) {
   if (!normalizedPayload || !studentId || !studentName) throw new Error("markAttendance: eksik parametre");
 
-  const body = normalizedPayload.sig
-    ? { qrPayload: normalizedPayload, studentId: String(studentId).trim(), name: String(studentName).trim() }
-    : { sessionId: normalizedPayload.sessionId, studentId: String(studentId).trim(), name: String(studentName).trim() };
+  const payloadWithDevice = addDeviceId(normalizedPayload);
+
+  const body = payloadWithDevice.sig
+    ? { qrPayload: payloadWithDevice, studentId: String(studentId).trim(), name: String(studentName).trim() }
+    : { sessionId: payloadWithDevice.sessionId, studentId: String(studentId).trim(), name: String(studentName).trim() };
 
   try {
     const res = await api.post("/attend", body);
@@ -53,6 +67,10 @@ export async function regenerateQr(sessionId, durationMinutes = 10) {
   if (!sessionId) throw new Error("regenerateQr: sessionId eksik");
   try {
     const res = await api.post(`/sessions/${encodeURIComponent(sessionId)}/qr`, { durationMinutes });
+    if (res.data.qrText) {
+      const parsed = JSON.parse(res.data.qrText);
+      res.data.qrText = JSON.stringify(addDeviceId(parsed));
+    }
     return res.data;
   } catch (err) {
     handleAxiosError(err, "regenerateQr");

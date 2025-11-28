@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useHistory } from "react-router-dom";
 import { markAttendance } from "../api";
 
-export default function StudentScanner({ studentsList = [] }) {
+export default function StudentScanner() {
   const location = useLocation();
+  const history = useHistory();
 
   const [studentId, setStudentId] = useState("");
   const [studentName, setStudentName] = useState("");
@@ -27,24 +28,12 @@ export default function StudentScanner({ studentsList = [] }) {
 
     try {
       const decoded = decodeURIComponent(payloadParam);
-
-      try {
-        const parsed = JSON.parse(decoded);
-        setQrPayload(parsed);
-        setMessage("QR kodu başarıyla okundu. Yoklama için hazır.");
-      } catch {
-        try {
-          const parsed2 = JSON.parse(payloadParam);
-          setQrPayload(parsed2);
-          setMessage("QR kodu başarıyla okundu. Yoklama için hazır.");
-        } catch {
-          setQrPayload(payloadParam);
-          setMessage("QR verisi okunamadı.");
-        }
-      }
-    } catch (err) {
+      const parsed = JSON.parse(decoded);
+      setQrPayload(parsed);
+      setMessage("QR kodu başarıyla okundu. Yoklama için hazır.");
+    } catch {
       setQrPayload(payloadParam);
-      setMessage("QR çözümlenemedi.");
+      setMessage("QR verisi okunamadı.");
     }
 
     return () => {
@@ -70,42 +59,24 @@ export default function StudentScanner({ studentsList = [] }) {
   const normalizePayload = (input) => {
     if (!input) return null;
     if (typeof input === "object") return input;
-
-    const s = String(input).trim();
-    if (!s) return null;
-
-    if (s.startsWith("{") && s.endsWith("}")) {
-      try {
-        return JSON.parse(s);
-      } catch {}
+    try {
+      return JSON.parse(String(input).trim());
+    } catch {
+      return { sessionId: String(input).trim() };
     }
-
-    return { sessionId: s };
   };
 
   // ---------- send attendance ----------
   const handleMark = async () => {
     if (success) return;
-
     if (!qrPayload) return setMessage("QR payload eksik.");
     if (!studentId) return setMessage("Öğrenci ID girin.");
     if (!studentName.trim()) return setMessage("İsim Soyisim girin.");
 
     const normalizedId = normalizeId(studentId);
     const normalizedName = normalizeName(studentName);
-
-    // ----- yoklama listesi kontrolü -----
-    const found = studentsList.some((s) => {
-      const sid = normalizeId(s.id);
-      const sname = normalizeName(s.name || s.fullname || "");
-      return sid === normalizedId && sname === normalizedName;
-    });
-
-    if (!found) {
-      return setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
-    }
-
     let normalized = normalizePayload(qrPayload);
+
     if (!normalized || !normalized.sessionId)
       return setMessage("QR payload geçersiz.");
 
@@ -128,9 +99,12 @@ export default function StudentScanner({ studentsList = [] }) {
         normalized.deviceId
       );
 
-      if (res?.ok || res?.success || res?.status === 200) {
+      if (res?.ok) {
         setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
+
+        // Başarı sayfasına yönlendir
+        history.push(`/yoklama-basarili?sessionId=${normalized.sessionId}`);
         return;
       }
 
@@ -147,8 +121,6 @@ export default function StudentScanner({ studentsList = [] }) {
 
   return (
     <div className="student-scanner-container">
-
-      {/* Header artık tamamen yazı — TIKLANMAZ */}
       <h2
         className="scanner-title"
         style={{
