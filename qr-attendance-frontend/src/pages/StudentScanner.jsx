@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { markAttendance } from "../api";
 
-export default function StudentScanner({ studentsList = [] }) {
+export default function StudentScanner() {
   const location = useLocation();
 
   const [studentId, setStudentId] = useState("");
@@ -27,20 +27,13 @@ export default function StudentScanner({ studentsList = [] }) {
 
     try {
       const decoded = decodeURIComponent(payloadParam);
-
       try {
         const parsed = JSON.parse(decoded);
         setQrPayload(parsed);
         setMessage("QR kodu başarıyla okundu. Yoklama için hazır.");
       } catch {
-        try {
-          const parsed2 = JSON.parse(payloadParam);
-          setQrPayload(parsed2);
-          setMessage("QR kodu başarıyla okundu. Yoklama için hazır.");
-        } catch {
-          setQrPayload(payloadParam);
-          setMessage("QR verisi okunamadı.");
-        }
+        setQrPayload(payloadParam);
+        setMessage("QR verisi okunamadı.");
       }
     } catch (err) {
       setQrPayload(payloadParam);
@@ -92,18 +85,7 @@ export default function StudentScanner({ studentsList = [] }) {
     if (!studentName.trim()) return setMessage("İsim Soyisim girin.");
 
     const normalizedId = normalizeId(studentId);
-    const normalizedName = normalizeName(studentName);
-
-    // ----- yoklama listesi kontrolü -----
-    const found = studentsList.some((s) => {
-      const sid = normalizeId(s.id);
-      const sname = normalizeName(s.name || s.fullname || "");
-      return sid === normalizedId && sname === normalizedName;
-    });
-
-    if (!found) {
-      return setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
-    }
+    const normalizedNameStr = normalizeName(studentName);
 
     let normalized = normalizePayload(qrPayload);
     if (!normalized || !normalized.sessionId)
@@ -124,7 +106,7 @@ export default function StudentScanner({ studentsList = [] }) {
       const res = await markAttendance(
         normalized,
         normalizedId,
-        normalizedName,
+        normalizedNameStr,
         normalized.deviceId
       );
 
@@ -147,8 +129,6 @@ export default function StudentScanner({ studentsList = [] }) {
 
   return (
     <div className="student-scanner-container">
-
-      {/* Header artık tamamen yazı — TIKLANMAZ */}
       <h2
         className="scanner-title"
         style={{
