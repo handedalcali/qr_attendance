@@ -88,8 +88,9 @@ export default function StudentScanner({ studentsList = [] }) {
     if (success) return;
 
     if (!qrPayload) return setMessage("QR payload eksik.");
-    if (!studentId) return setMessage("Öğrenci ID girin.");
-    if (!studentName.trim()) return setMessage("İsim Soyisim girin.");
+    if (!studentId) return setMessage("Öğrenci numarası girilmedi. Bu dersi almıyorsun.");
+    if (!studentName.trim())
+      return setMessage("İsim Soyisim girilmedi. Bu dersi almıyorsun.");
 
     const normalizedId = normalizeId(studentId);
     const normalizedName = normalizeName(studentName);
@@ -102,7 +103,9 @@ export default function StudentScanner({ studentsList = [] }) {
     });
 
     if (!found) {
-      return setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
+      return setMessage(
+        "⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış. Yoklama gönderilemez."
+      );
     }
 
     let normalized = normalizePayload(qrPayload);
@@ -147,8 +150,6 @@ export default function StudentScanner({ studentsList = [] }) {
 
   return (
     <div className="student-scanner-container">
-
-      {/* Header artık tamamen yazı — TIKLANMAZ */}
       <h2
         className="scanner-title"
         style={{
