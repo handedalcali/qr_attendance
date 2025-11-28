@@ -4,7 +4,7 @@ import QrReader from "react-qr-reader";
 import { useLocation } from "react-router-dom";
 import { markAttendance } from "../api";
 
-export default function StudentScanner({ studentsList = [] }) { // studentsList props olarak gelmeli
+export default function StudentScanner({ studentsList = [] }) {
   const location = useLocation();
 
   const [studentId, setStudentId] = useState("");
@@ -98,9 +98,17 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
       return;
     }
 
-    // 1. yoklama listesinde olup olmadığını kontrol et
-    if (studentsList.length && !studentsList.find(s => s.id === studentId)) {
-      setMessage("⚠️ Bu öğrenci yoklama listesinde değil.");
+    // ID + isim eşleşmesi kontrolü
+    const studentExists =
+      studentsList.length &&
+      studentsList.find(
+        (s) =>
+          normalizeId(s.id) === normalizeId(studentId) &&
+          normalizeName(s.name) === normalizeName(studentName)
+      );
+
+    if (!studentExists) {
+      setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
       return;
     }
 
@@ -110,7 +118,6 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
       return;
     }
 
-    // deviceId yoksa otomatik ekle
     if (!normalized.deviceId) {
       normalized.deviceId = "dev_" + Math.random().toString(36).substring(2, 10);
     }
@@ -127,7 +134,7 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
-        setMessage("✅ Yoklama başarıyla alındı."); // artık ekstra success mesajı yok
+        setMessage("✅ Yoklama başarıyla alındı."); // ekstra onay kaldırıldı
         setSuccess(true);
         return;
       } else {
