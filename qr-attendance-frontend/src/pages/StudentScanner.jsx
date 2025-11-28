@@ -49,9 +49,7 @@ export default function StudentScanner() {
     const s = String(input).trim();
     if (!s) return null;
     if (s.startsWith("{") && s.endsWith("}")) {
-      try {
-        return JSON.parse(s);
-      } catch {}
+      try { return JSON.parse(s); } catch {}
     }
     if (s.includes("payload=")) {
       try {
@@ -63,47 +61,28 @@ export default function StudentScanner() {
     return { sessionId: s };
   };
 
-  // İsim normalizasyonu
   const normalizeName = (name) => {
     if (!name && name !== "") return "";
-    return String(name)
-      .trim()
-      .replace(/\s+/g, " ")
-      .toLowerCase();
+    return String(name).trim().replace(/\s+/g, " ").toLowerCase();
+  };
+
+  const findStudentById = (inputId) => {
+    let storedStudents = [];
+    try {
+      storedStudents = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
+    } catch { storedStudents = []; }
+    return storedStudents.find(s => String(s.id).trim() === String(inputId).trim());
   };
 
   const handleMark = async (payloadOverride) => {
     if (success) return;
 
     const payloadToUse = payloadOverride || qrPayload;
-    if (!payloadToUse) {
-      setMessage("QR payload eksik.");
-      return;
-    }
-    if (!studentId) {
-      setMessage("Öğrenci ID girin.");
-      return;
-    }
-    if (!studentName.trim()) {
-      setMessage("İsim Soyisim girin.");
-      return;
-    }
+    if (!payloadToUse) { setMessage("QR payload eksik."); return; }
+    if (!studentId) { setMessage("Öğrenci ID girin."); return; }
+    if (!studentName.trim()) { setMessage("İsim Soyisim girin."); return; }
 
-    // Debug: localStorage’da kayıtlı öğrencileri kontrol et
-    let storedStudents = [];
-    try {
-      const rawList = localStorage.getItem("teacher_students_list");
-      console.log("localStorage teacher_students_list:", rawList);
-      storedStudents = JSON.parse(rawList || "[]");
-    } catch (err) {
-      console.warn("Excel listesi okunamadı:", err);
-      storedStudents = [];
-    }
-
-    const idStr = String(studentId).trim();
-    console.log("Giriş studentId:", studentId, "=> normalize:", idStr);
-
-    const foundById = storedStudents.find(s => String(s.id).trim() === idStr);
+    const foundById = findStudentById(studentId);
     console.log("Bulunan kayıt:", foundById);
 
     if (!foundById) {
@@ -113,8 +92,6 @@ export default function StudentScanner() {
 
     const inputNameNorm = normalizeName(studentName);
     const storedNameNorm = normalizeName(foundById.name || "");
-    console.log("Giriş isim normalize:", inputNameNorm, "Listede kayıtlı:", storedNameNorm);
-
     if (!storedNameNorm) {
       setMessage("❌ Öğrenci adı listede eksik; lütfen öğretmene danışın.");
       return;
@@ -134,11 +111,7 @@ export default function StudentScanner() {
       setLoading(true);
       setMessage("");
 
-      const res = await markAttendance(
-        normalized,
-        idStr,
-        String(studentName).trim()
-      );
+      const res = await markAttendance(normalized, String(studentId).trim(), String(studentName).trim());
 
       if (res?.ok || res?.success || res?.status === 200) {
         setMessage("✅ Yoklama başarıyla alındı.");
@@ -146,23 +119,18 @@ export default function StudentScanner() {
 
         // localStorage güncelle
         try {
-          const studentsList = storedStudents.slice();
-          const exists = studentsList.some(s => String(s.id).trim() === idStr);
-          if (!exists) {
-            studentsList.push({ id: idStr, name: String(studentName).trim() });
+          const studentsList = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
+          if (!studentsList.some(s => String(s.id).trim() === String(studentId).trim())) {
+            studentsList.push({ id: String(studentId).trim(), name: String(studentName).trim() });
             localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
           }
 
-          const savedAttendance = localStorage.getItem("teacher_attendance");
-          const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
-          const attendanceExists = attendanceList.some(a => a.studentId === idStr);
-          if (!attendanceExists) {
-            attendanceList.push({ studentId: idStr, name: String(studentName).trim(), timestamp: new Date().toISOString() });
+          const attendanceList = JSON.parse(localStorage.getItem("teacher_attendance") || "[]");
+          if (!attendanceList.some(a => a.studentId === String(studentId).trim())) {
+            attendanceList.push({ studentId: String(studentId).trim(), name: String(studentName).trim(), timestamp: new Date().toISOString() });
             localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
           }
-        } catch (e) {
-          console.warn("LocalStorage güncellenirken hata:", e);
-        }
+        } catch (e) { console.warn("LocalStorage güncellenirken hata:", e); }
 
         return;
       } else {
@@ -173,16 +141,11 @@ export default function StudentScanner() {
       const status = err?.response?.status;
       const dataErr = err?.response?.data?.error || err?.message || String(err);
 
-      if (status === 409) {
-        setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
-      } else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş")) {
+      if (status === 409) setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
+      else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş"))
         setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
-      } else {
-        setMessage("Sunucu hatası: " + dataErr);
-      }
-    } finally {
-      setLoading(false);
-    }
+      else setMessage("Sunucu hatası: " + dataErr);
+    } finally { setLoading(false); }
   };
 
   const handleScan = (data) => {
@@ -197,9 +160,7 @@ export default function StudentScanner() {
   const handleError = (err) => {
     if (["NotAllowedError", "NotFoundError"].includes(err?.name)) {
       setMessage("Kamera izni verilmedi veya cihazda kamera bulunamadı.");
-    } else {
-      setMessage("Tarayıcı hatası: " + (err?.message || String(err)));
-    }
+    } else setMessage("Tarayıcı hatası: " + (err?.message || String(err)));
   };
 
   return (
