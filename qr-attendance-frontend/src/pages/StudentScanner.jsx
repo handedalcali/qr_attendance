@@ -92,17 +92,17 @@ export default function StudentScanner({ studentsList = [] }) {
     if (!studentName.trim()) return setMessage("İsim Soyisim girin.");
 
     const normalizedId = normalizeId(studentId);
-    const normalizedNameValue = normalizeName(studentName);
+    const normalizedName = normalizeName(studentName);
 
     // ----- yoklama listesi kontrolü -----
     const found = studentsList.some((s) => {
       const sid = normalizeId(s.id);
       const sname = normalizeName(s.name || s.fullname || "");
-      return sid === normalizedId && sname === normalizedNameValue;
+      return sid === normalizedId && sname === normalizedName;
     });
 
     if (!found) {
-      return setMessage("⚠️ Bu dersi almıyorsun veya bilgiler yanlış. Yoklama alınamaz.");
+      return setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
     }
 
     let normalized = normalizePayload(qrPayload);
@@ -124,7 +124,7 @@ export default function StudentScanner({ studentsList = [] }) {
       const res = await markAttendance(
         normalized,
         normalizedId,
-        normalizedNameValue,
+        normalizedName,
         normalized.deviceId
       );
 
