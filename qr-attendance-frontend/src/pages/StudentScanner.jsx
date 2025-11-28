@@ -1,4 +1,4 @@
-// StudentScanner.js
+// StudentScanner.jsx
 import React, { useEffect, useState, useRef } from "react";
 import QrReader from "react-qr-reader";
 import { useLocation } from "react-router-dom";
@@ -40,6 +40,23 @@ export default function StudentScanner() {
     };
   }, [location]);
 
+  const normalizeId = (id) => String(id || "").trim();
+
+  const normalizeName = (name) => {
+    if (!name) return "";
+    return String(name)
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase()
+      .replace(/İ/g, "i")
+      .replace(/I/g, "i")
+      .replace(/Ğ/g, "g")
+      .replace(/Ü/g, "u")
+      .replace(/Ş/g, "s")
+      .replace(/Ö/g, "o")
+      .replace(/Ç/g, "c");
+  };
+
   const normalizePayload = (input) => {
     if (!input) return null;
     if (typeof input === "object") {
@@ -49,7 +66,9 @@ export default function StudentScanner() {
     const s = String(input).trim();
     if (!s) return null;
     if (s.startsWith("{") && s.endsWith("}")) {
-      try { return JSON.parse(s); } catch {}
+      try {
+        return JSON.parse(s);
+      } catch {}
     }
     if (s.includes("payload=")) {
       try {
@@ -61,29 +80,39 @@ export default function StudentScanner() {
     return { sessionId: s };
   };
 
-  const normalizeName = (name) => {
-    if (!name && name !== "") return "";
-    return String(name).trim().replace(/\s+/g, " ").toLowerCase();
-  };
-
-  const findStudentById = (inputId) => {
-    let storedStudents = [];
-    try {
-      storedStudents = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
-    } catch { storedStudents = []; }
-    return storedStudents.find(s => String(s.id).trim() === String(inputId).trim());
-  };
-
   const handleMark = async (payloadOverride) => {
     if (success) return;
 
     const payloadToUse = payloadOverride || qrPayload;
-    if (!payloadToUse) { setMessage("QR payload eksik."); return; }
-    if (!studentId) { setMessage("Öğrenci ID girin."); return; }
-    if (!studentName.trim()) { setMessage("İsim Soyisim girin."); return; }
+    if (!payloadToUse) {
+      setMessage("QR payload eksik.");
+      return;
+    }
+    if (!studentId) {
+      setMessage("Öğrenci ID girin.");
+      return;
+    }
+    if (!studentName.trim()) {
+      setMessage("İsim Soyisim girin.");
+      return;
+    }
 
-    const foundById = findStudentById(studentId);
-    console.log("Bulunan kayıt:", foundById);
+    let storedStudents = [];
+    try {
+      const rawList = localStorage.getItem("teacher_students_list");
+      storedStudents = JSON.parse(rawList || "[]");
+    } catch (err) {
+      console.warn("Excel listesi okunamadı:", err);
+      storedStudents = [];
+    }
+
+    const idStr = normalizeId(studentId);
+    const foundById = storedStudents.find(s => normalizeId(s.id) === idStr);
+
+    console.log("storedStudents:", storedStudents);
+    console.log("input id:", studentId, "normalized:", idStr);
+    console.log("input name:", studentName, "normalized:", normalizeName(studentName));
+    console.log("foundById:", foundById);
 
     if (!foundById) {
       setMessage("❌ Numaranız listede bulunamadı veya yanlış girdiniz.");
@@ -92,6 +121,7 @@ export default function StudentScanner() {
 
     const inputNameNorm = normalizeName(studentName);
     const storedNameNorm = normalizeName(foundById.name || "");
+
     if (!storedNameNorm) {
       setMessage("❌ Öğrenci adı listede eksik; lütfen öğretmene danışın.");
       return;
@@ -111,26 +141,34 @@ export default function StudentScanner() {
       setLoading(true);
       setMessage("");
 
-      const res = await markAttendance(normalized, String(studentId).trim(), String(studentName).trim());
+      const res = await markAttendance(
+        normalized,
+        idStr,
+        String(studentName).trim()
+      );
 
       if (res?.ok || res?.success || res?.status === 200) {
         setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
 
-        // localStorage güncelle
         try {
-          const studentsList = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
-          if (!studentsList.some(s => String(s.id).trim() === String(studentId).trim())) {
-            studentsList.push({ id: String(studentId).trim(), name: String(studentName).trim() });
+          const studentsList = storedStudents.slice();
+          const exists = studentsList.some(s => normalizeId(s.id) === idStr);
+          if (!exists) {
+            studentsList.push({ id: idStr, name: String(studentName).trim() });
             localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
           }
 
-          const attendanceList = JSON.parse(localStorage.getItem("teacher_attendance") || "[]");
-          if (!attendanceList.some(a => a.studentId === String(studentId).trim())) {
-            attendanceList.push({ studentId: String(studentId).trim(), name: String(studentName).trim(), timestamp: new Date().toISOString() });
+          const savedAttendance = localStorage.getItem("teacher_attendance");
+          const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
+          const attendanceExists = attendanceList.some(a => normalizeId(a.studentId) === idStr);
+          if (!attendanceExists) {
+            attendanceList.push({ studentId: idStr, name: String(studentName).trim(), timestamp: new Date().toISOString() });
             localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
           }
-        } catch (e) { console.warn("LocalStorage güncellenirken hata:", e); }
+        } catch (e) {
+          console.warn("LocalStorage güncellenirken hata:", e);
+        }
 
         return;
       } else {
@@ -141,11 +179,16 @@ export default function StudentScanner() {
       const status = err?.response?.status;
       const dataErr = err?.response?.data?.error || err?.message || String(err);
 
-      if (status === 409) setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
-      else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş"))
+      if (status === 409) {
+        setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
+      } else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş")) {
         setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
-      else setMessage("Sunucu hatası: " + dataErr);
-    } finally { setLoading(false); }
+      } else {
+        setMessage("Sunucu hatası: " + dataErr);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleScan = (data) => {
@@ -160,7 +203,9 @@ export default function StudentScanner() {
   const handleError = (err) => {
     if (["NotAllowedError", "NotFoundError"].includes(err?.name)) {
       setMessage("Kamera izni verilmedi veya cihazda kamera bulunamadı.");
-    } else setMessage("Tarayıcı hatası: " + (err?.message || String(err)));
+    } else {
+      setMessage("Tarayıcı hatası: " + (err?.message || String(err)));
+    }
   };
 
   return (
