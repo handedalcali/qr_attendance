@@ -98,10 +98,15 @@ export default function StudentScanner() {
       return;
     }
 
-    const normalized = normalizePayload(payloadToUse);
-    if (!normalized || !normalized.sessionId || !normalized.deviceId) {
-      setMessage("QR payload geçersiz veya Oturum/Device ID eksik.");
+    let normalized = normalizePayload(payloadToUse);
+    if (!normalized || !normalized.sessionId) {
+      setMessage("QR payload geçersiz veya Session ID eksik.");
       return;
+    }
+
+    // deviceId yoksa otomatik ekle
+    if (!normalized.deviceId) {
+      normalized.deviceId = "dev_" + Math.random().toString(36).substring(2, 10);
     }
 
     try {
@@ -182,7 +187,7 @@ export default function StudentScanner() {
 
       <button
         onClick={() => setShowScanner(!showScanner)}
-        className={`scanner-button ${showScanner ? 'btn-danger' : 'btn-success'}`}
+        className={`scanner-button ${showScanner ? "btn-danger" : "btn-success"}`}
         disabled={loading || success}
       >
         {showScanner ? "Tarayıcıyı Kapat" : "QR Kod Tarayıcıyı Başlat (Kamera)"}
@@ -203,9 +208,9 @@ export default function StudentScanner() {
       <label className="input-label">QR Kod Verisi (Manuel Giriş):</label>
       <textarea
         rows={3}
-        value={typeof qrPayload === 'object' ? JSON.stringify(qrPayload, null, 2) : (qrPayload || '')}
+        value={typeof qrPayload === "object" ? JSON.stringify(qrPayload, null, 2) : qrPayload || ""}
         onChange={(e) => setQrPayload(e.target.value)}
-        placeholder='QR payload (JSON veya sadece Session ID veya tam URL)'
+        placeholder="QR payload (JSON veya sadece Session ID veya tam URL)"
         className="scanner-textarea"
         disabled={success}
       />
@@ -213,13 +218,15 @@ export default function StudentScanner() {
       <button
         onClick={() => handleMark()}
         disabled={loading || !studentId || !studentName || !qrPayload || success}
-        className={`scanner-button btn-primary ${loading || !studentId || !studentName || !qrPayload || success ? 'btn-disabled' : ''}`}
+        className={`scanner-button btn-primary ${
+          loading || !studentId || !studentName || !qrPayload || success ? "btn-disabled" : ""
+        }`}
       >
-        {loading ? "Gönderiliyor..." : (success ? "Kaydedildi" : "Yoklamayı Gönder")}
+        {loading ? "Gönderiliyor..." : success ? "Kaydedildi" : "Yoklamayı Gönder"}
       </button>
 
       {message && <p className="message-info" style={{ marginTop: 10 }}>{message}</p>}
-      {success && <p style={{ color: "green", fontWeight: "600" }}>✅ Kaydınız alındı — teşekkürler!</p>}
+      {success && <p style={{ color: "green", fontWeight: 600 }}>✅ Kaydınız alındı — teşekkürler!</p>}
     </div>
   );
 }
