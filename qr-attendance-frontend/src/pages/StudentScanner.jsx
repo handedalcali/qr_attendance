@@ -63,6 +63,7 @@ export default function StudentScanner() {
     return { sessionId: s };
   };
 
+  // İsim normalizasyonu: baş/son boşlukları temizle, çoklu boşlukları tek boşluğa düşür, küçük harfe çevir
   const normalizeName = (name) => {
     if (!name && name !== "") return "";
     return String(name)
@@ -88,6 +89,7 @@ export default function StudentScanner() {
       return;
     }
 
+    // Excel listesinden kontrol: önce ID var mı, sonra isim eşleşiyor mu (case-insensitive)
     let storedStudents = [];
     try {
       storedStudents = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
@@ -96,14 +98,16 @@ export default function StudentScanner() {
       storedStudents = [];
     }
 
-    const idStr = String(studentId).trim();
-    const foundById = storedStudents.find(s => String(s.id).trim() === idStr);
+    // ID’leri normalize et: baştaki sıfırları sil, trim ve string
+    const idStr = String(studentId).replace(/^0+/, "").trim();
+    const foundById = storedStudents.find(s => String(s.id).replace(/^0+/, "").trim() === idStr);
 
     if (!foundById) {
       setMessage("❌ Numaranız listede bulunamadı veya yanlış girdiniz.");
       return;
     }
 
+    // İsim kontrolü (büyük/küçük harf duyarsız, fazla boşluk duyarsız)
     const inputNameNorm = normalizeName(studentName);
     const storedNameNorm = normalizeName(foundById.name || "");
     if (!storedNameNorm) {
@@ -125,23 +129,20 @@ export default function StudentScanner() {
       setLoading(true);
       setMessage("");
 
-      // **QR + yoklama gömme çözümü entegre edildi**
-      const attendancePayload = {
-        ...normalized,
-        studentId: idStr,
-        name: String(studentName).trim(),
-        timestamp: new Date().toISOString()
-      };
-
-      const res = await markAttendance(attendancePayload, idStr, String(studentName).trim());
+      const res = await markAttendance(
+        normalized,
+        idStr,
+        String(studentName).trim()
+      );
 
       if (res?.ok || res?.success || res?.status === 200) {
         setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
 
+        // localStorage güncelle
         try {
           const studentsList = storedStudents.slice();
-          const exists = studentsList.some(s => String(s.id).trim() === idStr);
+          const exists = studentsList.some(s => String(s.id).replace(/^0+/, "").trim() === idStr);
           if (!exists) {
             studentsList.push({ id: idStr, name: String(studentName).trim() });
             localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
@@ -151,7 +152,7 @@ export default function StudentScanner() {
           const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
           const attendanceExists = attendanceList.some(a => a.studentId === idStr);
           if (!attendanceExists) {
-            attendanceList.push(attendancePayload);
+            attendanceList.push({ studentId: idStr, name: String(studentName).trim(), timestamp: new Date().toISOString() });
             localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
           }
         } catch (e) {
