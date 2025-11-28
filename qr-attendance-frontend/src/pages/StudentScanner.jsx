@@ -4,7 +4,7 @@ import QrReader from "react-qr-reader";
 import { useLocation } from "react-router-dom";
 import { markAttendance } from "../api";
 
-export default function StudentScanner() {
+export default function StudentScanner({ studentsList = [] }) { // studentsList props olarak gelmeli
   const location = useLocation();
 
   const [studentId, setStudentId] = useState("");
@@ -98,6 +98,12 @@ export default function StudentScanner() {
       return;
     }
 
+    // 1. yoklama listesinde olup olmadığını kontrol et
+    if (studentsList.length && !studentsList.find(s => s.id === studentId)) {
+      setMessage("⚠️ Bu öğrenci yoklama listesinde değil.");
+      return;
+    }
+
     let normalized = normalizePayload(payloadToUse);
     if (!normalized || !normalized.sessionId) {
       setMessage("QR payload geçersiz veya Session ID eksik.");
@@ -121,7 +127,7 @@ export default function StudentScanner() {
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
-        setMessage("✅ Yoklama başarıyla alındı.");
+        setMessage("✅ Yoklama başarıyla alındı."); // artık ekstra success mesajı yok
         setSuccess(true);
         return;
       } else {
@@ -226,7 +232,6 @@ export default function StudentScanner() {
       </button>
 
       {message && <p className="message-info" style={{ marginTop: 10 }}>{message}</p>}
-      {success && <p style={{ color: "green", fontWeight: 600 }}>✅ Kaydınız alındı — teşekkürler!</p>}
     </div>
   );
 }
