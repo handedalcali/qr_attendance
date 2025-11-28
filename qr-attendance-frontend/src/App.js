@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
 
 // Sayfa Bileşenleri
 import TeacherPanel from './pages/TeacherPanel';
@@ -26,8 +26,7 @@ const HomePage = () => (
 
 // Başarı Sayfası
 const SuccessPage = () => {
-  const location = useLocation();
-  const sessionId = new URLSearchParams(location.search).get("sessionId");
+  const sessionId = new URLSearchParams(window.location.search).get("sessionId");
 
   return (
     <div className="success-container">
@@ -55,10 +54,20 @@ function App() {
   return (
     <Router>
       <div className="App">
+
+        {/* ---- HEADER ARTIK TIKLANMIYOR ---- */}
         <header className="App-header">
-          <Link to="/" className="app-header-link">
-            <h1>QR Attendance System</h1>
-          </Link>
+          <h1
+            style={{
+              cursor: "default",
+              userSelect: "none",
+              pointerEvents: "none",
+              margin: 0,
+              padding: 0
+            }}
+          >
+            QR Attendance System
+          </h1>
         </header>
 
         <main className="App-main">
