@@ -148,6 +148,7 @@ export default function StudentScanner({ studentsList = [] }) {
   return (
     <div className="student-scanner-container">
 
+      {/* Header artık tamamen yazı — TIKLANMAZ */}
       <h2
         className="scanner-title"
         style={{

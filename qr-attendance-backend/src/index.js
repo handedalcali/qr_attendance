@@ -10,6 +10,7 @@ const sessionsRoute = require('./routes/sessions');
 const attendRoute = require('./routes/attend');
 
 const app = express();
+
 app.set('trust proxy', process.env.TRUST_PROXY === 'true');
 
 app.use(helmet());
@@ -21,7 +22,11 @@ const connectSrcValue = "'self'" + (allowedOrigins.length ? ' ' + allowedOrigins
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src " + connectSrcValue
+    "default-src 'self'; " +
+    "img-src 'self' data:; " +
+    "script-src 'self'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    `connect-src ${connectSrcValue};`
   );
   next();
 });
@@ -48,10 +53,10 @@ const corsOptions = {
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS policy: origin not allowed - ${origin}`));
   },
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization','X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
 app.use((req, res, next) => {
   cors(corsOptions)(req, res, (err) => {
@@ -67,12 +72,18 @@ app.use((req, res, next) => {
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 (async () => {
-  try { await connectDB(); console.log('Database connected successfully'); }
-  catch (err) { console.error('Database connection failed:', err); process.exit(1); }
+  try {
+    await connectDB();
+    console.log('Database connected successfully');
+  } catch (err) {
+    console.error('Database connection failed:', err);
+    process.exit(1);
+  }
 })();
 
 app.use('/api/sessions', sessionsRoute);
 app.use('/api/attend', attendRoute);
+
 app.get('/health', (req, res) => res.json({ ok: true, env: process.env.NODE_ENV || 'development' }));
 
 app.use((err, req, res, next) => {

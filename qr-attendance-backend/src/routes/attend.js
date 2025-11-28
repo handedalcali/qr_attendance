@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { markAttendance } = require('../controllers/attendanceController');
+const { markAttendance } = require('../controllers/attendController');
 
 router.post('/', (req, res, next) => {
   try {
@@ -15,12 +15,28 @@ router.post('/', (req, res, next) => {
         if (!name && qrPayload.name) name = qrPayload.name;
         if (!deviceId && qrPayload.deviceId) deviceId = qrPayload.deviceId;
       } else if (typeof qrPayload === 'string') {
-        try {
-          const parsed = JSON.parse(qrPayload.trim());
-          sessionId = parsed.sessionId || parsed.id || parsed._id;
-          if (!name && parsed.name) name = parsed.name;
-          if (!deviceId && parsed.deviceId) deviceId = parsed.deviceId;
-        } catch (e) {}
+        const s = qrPayload.trim();
+        if (s.startsWith('{') && s.endsWith('}')) {
+          try {
+            const parsed = JSON.parse(s);
+            sessionId = parsed.sessionId || parsed.id || parsed._id;
+            if (!name && parsed.name) name = parsed.name;
+            if (!deviceId && parsed.deviceId) deviceId = parsed.deviceId;
+          } catch (e) {}
+        } else if (s.includes('payload=')) {
+          try {
+            const url = new URL(s);
+            const p = url.searchParams.get('payload');
+            if (p) {
+              const parsed = JSON.parse(decodeURIComponent(p));
+              sessionId = parsed.sessionId || parsed.id || parsed._id;
+              if (!name && parsed.name) name = parsed.name;
+              if (!deviceId && parsed.deviceId) deviceId = parsed.deviceId;
+            }
+          } catch (e) {}
+        } else {
+          sessionId = s;
+        }
       }
     }
 

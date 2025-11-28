@@ -30,7 +30,6 @@ exports.markAttendance = async (req, res) => {
 
     let sessionId = sessionIdFromBody;
 
-    // QR payload doğrulama
     if (qrPayload) {
       const parsed = tryParseJson(qrPayload);
       if (!parsed || !parsed.sessionId || !parsed.expiresAt || !parsed.sig)
@@ -46,7 +45,6 @@ exports.markAttendance = async (req, res) => {
         return res.status(400).json({ error: 'Oturum süresi dolmuş. Lütfen öğretmene danışın.' });
       }
 
-      // QR payload içine yoklamayı gömme (isteğe bağlı)
       if (!parsed.attendance) parsed.attendance = [];
       parsed.attendance.push({ studentId, name: studentName, deviceId, timestamp: new Date().getTime() });
       qrPayload = parsed;
@@ -63,7 +61,6 @@ exports.markAttendance = async (req, res) => {
 
     if (!Array.isArray(session.students)) session.students = [];
 
-    // Aynı cihazdan tekrar yoklama alınmasını engelle ve güncelle
     const existing = await Attendance.findOne({ sessionId, studentId });
     if (existing) {
       if (existing.meta?.deviceId && existing.meta.deviceId !== deviceId) {
@@ -76,7 +73,6 @@ exports.markAttendance = async (req, res) => {
       return res.json({ ok: true, message: 'Yoklama başarıyla güncellendi (aynı cihaz).', qrPayload });
     }
 
-    // Yoklama oluştur
     await Attendance.create({
       sessionId,
       studentId,
@@ -84,7 +80,6 @@ exports.markAttendance = async (req, res) => {
       meta: { deviceId, ip: req.ip, ua: req.get('User-Agent') },
     });
 
-    // Session.students güncelle
     const alreadyInSession = session.students.some(s => String(s.id) === studentId);
     if (!alreadyInSession) {
       session.students.push({ id: studentId, name: studentName, timestamp: new Date(), deviceId });
