@@ -92,7 +92,7 @@ exports.markAttendance = async (req, res) => {
     // Öğrenci listesinde eşleşme kontrolü (ID ve normalize edilmiş isim)
     const studentFound = session.students.some(s => {
       const sid = String(s.id).trim();
-      const sname = normalizeName(s.name);
+      const sname = normalizeName(s.name || s.fullname || '');
       return sid === studentId && sname === studentName;
     });
 

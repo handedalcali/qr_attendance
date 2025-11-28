@@ -21,8 +21,7 @@ exports.createSession = async (req, res) => {
     const payload = `${sessionId}|${expiresAt.getTime()}`;
     const sig = sign(payload);
 
-    // QR payload içine attendance array ekliyoruz
-    const rawQrText = JSON.stringify({ sessionId, expiresAt: expiresAt.getTime(), sig, attendance: [] });
+    const rawQrText = JSON.stringify({ sessionId, expiresAt: expiresAt.getTime(), sig });
 
     await Session.create({ sessionId, createdBy, courseName, startedAt, expiresAt, students });
 
@@ -71,15 +70,7 @@ exports.regenerateQr = async (req, res) => {
 
     const payload = `${sessionId}|${expiresAt.getTime()}`;
     const sig = sign(payload);
-
-    // Mevcut QR payload içinde attendance varsa koru
-    let attendance = [];
-    try {
-      const parsedQr = JSON.parse(session.qrText || '{}');
-      if (Array.isArray(parsedQr.attendance)) attendance = parsedQr.attendance;
-    } catch (e) {}
-
-    const rawQrText = JSON.stringify({ sessionId, expiresAt: expiresAt.getTime(), sig, attendance });
+    const rawQrText = JSON.stringify({ sessionId, expiresAt: expiresAt.getTime(), sig });
 
     // Sadece QR süresini güncelliyoruz, yoklamayı silmiyoruz
     session.expiresAt = expiresAt;
@@ -100,15 +91,7 @@ exports.clearAttendance = async (req, res) => {
 
     await Attendance.deleteMany({ sessionId });
 
-    // QR payload içindeki attendance arrayi de temizle
-    let qrText = '{}';
-    try {
-      const parsedQr = JSON.parse(session.qrText || '{}');
-      parsedQr.attendance = [];
-      qrText = JSON.stringify(parsedQr);
-    } catch (e) {}
-
-    return res.json({ ok: true, message: 'Yoklama listesi sıfırlandı.', qrText });
+    return res.json({ ok: true, message: 'Yoklama listesi sıfırlandı.' });
   } catch (err) {
     console.error('clearAttendance error', err);
     return res.status(500).json({ error: 'Yoklama sıfırlanamadı' });
