@@ -14,6 +14,7 @@ export default function StudentScanner() {
   const [loading, setLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [deviceId, setDeviceId] = useState("");
 
   const isMountedRef = useRef(true);
 
@@ -26,7 +27,7 @@ export default function StudentScanner() {
         const parsed = JSON.parse(decodeURIComponent(payloadJson));
         if (isMountedRef.current) {
           setQrPayload(parsed);
-          setMessage("QR kodu başarıyla okundu. Lütfen ID ve isim girin.");
+          setMessage("QR kodu başarıyla okundu. Lütfen ID, isim ve cihaz bilgisi girin.");
         }
       } catch (e) {
         if (isMountedRef.current) {
@@ -41,7 +42,6 @@ export default function StudentScanner() {
   }, [location]);
 
   const normalizeId = (id) => String(id || "").trim();
-
   const normalizeName = (name) => {
     if (!name) return "";
     return String(name)
@@ -96,38 +96,8 @@ export default function StudentScanner() {
       setMessage("İsim Soyisim girin.");
       return;
     }
-
-    let storedStudents = [];
-    try {
-      const rawList = localStorage.getItem("teacher_students_list");
-      storedStudents = JSON.parse(rawList || "[]");
-    } catch (err) {
-      console.warn("Excel listesi okunamadı:", err);
-      storedStudents = [];
-    }
-
-    const idStr = normalizeId(studentId);
-    const foundById = storedStudents.find(s => normalizeId(s.id) === idStr);
-
-    console.log("storedStudents:", storedStudents);
-    console.log("input id:", studentId, "normalized:", idStr);
-    console.log("input name:", studentName, "normalized:", normalizeName(studentName));
-    console.log("foundById:", foundById);
-
-    if (!foundById) {
-      setMessage("❌ Numaranız listede bulunamadı veya yanlış girdiniz.");
-      return;
-    }
-
-    const inputNameNorm = normalizeName(studentName);
-    const storedNameNorm = normalizeName(foundById.name || "");
-
-    if (!storedNameNorm) {
-      setMessage("❌ Öğrenci adı listede eksik; lütfen öğretmene danışın.");
-      return;
-    }
-    if (inputNameNorm !== storedNameNorm) {
-      setMessage("❌ ID bulundu ama isim eşleşmiyor. Lütfen adınızı doğru girin veya öğretmene danışın.");
+    if (!deviceId.trim()) {
+      setMessage("Cihaz ID girin.");
       return;
     }
 
@@ -143,33 +113,14 @@ export default function StudentScanner() {
 
       const res = await markAttendance(
         normalized,
-        idStr,
-        String(studentName).trim()
+        normalizeId(studentId),
+        String(studentName).trim(),
+        String(deviceId).trim()
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
         setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
-
-        try {
-          const studentsList = storedStudents.slice();
-          const exists = studentsList.some(s => normalizeId(s.id) === idStr);
-          if (!exists) {
-            studentsList.push({ id: idStr, name: String(studentName).trim() });
-            localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
-          }
-
-          const savedAttendance = localStorage.getItem("teacher_attendance");
-          const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
-          const attendanceExists = attendanceList.some(a => normalizeId(a.studentId) === idStr);
-          if (!attendanceExists) {
-            attendanceList.push({ studentId: idStr, name: String(studentName).trim(), timestamp: new Date().toISOString() });
-            localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
-          }
-        } catch (e) {
-          console.warn("LocalStorage güncellenirken hata:", e);
-        }
-
         return;
       } else {
         setMessage("Hata: " + (res?.error || JSON.stringify(res)));
@@ -194,7 +145,7 @@ export default function StudentScanner() {
   const handleScan = (data) => {
     if (data) {
       setQrPayload(data);
-      setMessage("QR kodu okundu. Göndermek için ID ve isim girip butona basın.");
+      setMessage("QR kodu okundu. Göndermek için ID, isim ve cihaz bilgisi girin.");
       setShowScanner(false);
       setSuccess(false);
     }
@@ -212,9 +163,8 @@ export default function StudentScanner() {
     <div className="student-scanner-container">
       <h2 className="scanner-title">Öğrenci Yoklama Girişi</h2>
 
-      <label htmlFor="studentIdInput" className="input-label">Öğrenci Numarası / ID:</label>
+      <label className="input-label">Öğrenci Numarası / ID:</label>
       <input
-        id="studentIdInput"
         type="text"
         value={studentId}
         onChange={(e) => setStudentId(e.target.value.replace(/\D/g, ""))}
@@ -223,13 +173,22 @@ export default function StudentScanner() {
         disabled={success}
       />
 
-      <label htmlFor="studentNameInput" className="input-label">İsim Soyisim:</label>
+      <label className="input-label">İsim Soyisim:</label>
       <input
-        id="studentNameInput"
         type="text"
         value={studentName}
         onChange={(e) => setStudentName(e.target.value)}
         placeholder="Örn: Ahmet Yılmaz"
+        className="scanner-input"
+        disabled={success}
+      />
+
+      <label className="input-label">Cihaz ID (Device ID):</label>
+      <input
+        type="text"
+        value={deviceId}
+        onChange={(e) => setDeviceId(e.target.value)}
+        placeholder="Örn: 1a2b3c4d"
         className="scanner-input"
         disabled={success}
       />
@@ -254,9 +213,8 @@ export default function StudentScanner() {
         </div>
       )}
 
-      <label htmlFor="qrPayloadInput" className="input-label">QR Kod Verisi (Manuel Giriş):</label>
+      <label className="input-label">QR Kod Verisi (Manuel Giriş):</label>
       <textarea
-        id="qrPayloadInput"
         rows={3}
         value={typeof qrPayload === 'object' ? JSON.stringify(qrPayload, null, 2) : (qrPayload || '')}
         onChange={(e) => setQrPayload(e.target.value)}
@@ -265,15 +223,13 @@ export default function StudentScanner() {
         disabled={success}
       />
 
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button
-          onClick={() => handleMark()}
-          disabled={loading || !studentId || !studentName || !qrPayload || success}
-          className={`scanner-button btn-primary ${loading || !studentId || !studentName || !qrPayload || success ? 'btn-disabled' : ''}`}
-        >
-          {loading ? "Gönderiliyor..." : (success ? "Kaydedildi" : "Yoklamayı Gönder")}
-        </button>
-      </div>
+      <button
+        onClick={() => handleMark()}
+        disabled={loading || !studentId || !studentName || !deviceId || !qrPayload || success}
+        className={`scanner-button btn-primary ${loading || !studentId || !studentName || !deviceId || !qrPayload || success ? 'btn-disabled' : ''}`}
+      >
+        {loading ? "Gönderiliyor..." : (success ? "Kaydedildi" : "Yoklamayı Gönder")}
+      </button>
 
       {message && <p className="message-info" style={{ marginTop: 10 }}>{message}</p>}
       {success && <p style={{ color: "green", fontWeight: "600" }}>✅ Kaydınız alındı — teşekkürler!</p>}

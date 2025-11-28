@@ -10,6 +10,7 @@ const SessionSchema = new mongoose.Schema({
     {
       id: { type: String, required: true },
       name: { type: String, required: true },
+      deviceId: { type: String },        // Cihaz ID ekledik
       timestamp: { type: Date, default: Date.now }
     }
   ],

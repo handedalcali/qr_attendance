@@ -20,6 +20,10 @@ function formatExpiry(expiresAt) {
   return isNaN(d) ? "Invalid Date" : d.toLocaleString();
 }
 
+function generateDeviceId() {
+  return 'dev_' + Math.random().toString(36).substring(2, 10);
+}
+
 export default function TeacherPanel() {
   const history = useHistory();
   const location = useLocation();
@@ -87,36 +91,24 @@ export default function TeacherPanel() {
           setStudentQrUrl(createQrUrl({ sessionId: sessionObj.sessionId, expiresAt: sessionObj.expiresAt, sig: sessionObj.sig }, window.location.href));
         }
 
-        try {
-          if (!teacherName) {
-            const savedTeacherRaw = localStorage.getItem("teacher_info");
-            if (savedTeacherRaw) {
-              const parsed = JSON.parse(savedTeacherRaw);
-              setTeacherName(parsed.name || "");
-              setCourseName(parsed.course || "");
-              setDuration(parsed.duration || 10);
-            }
+        if (!teacherName) {
+          const savedTeacherRaw = localStorage.getItem("teacher_info");
+          if (savedTeacherRaw) {
+            const parsed = JSON.parse(savedTeacherRaw);
+            setTeacherName(parsed.name || "");
+            setCourseName(parsed.course || "");
+            setDuration(parsed.duration || 10);
           }
-        } catch (err) {
-          console.warn("teacher_info yüklenemedi:", err);
         }
 
-        try {
-          if (!studentsList.length) {
-            const savedStudents = localStorage.getItem("teacher_students_list");
-            if (savedStudents) setStudentsList(JSON.parse(savedStudents));
-          }
-        } catch (err) {
-          console.warn("teacher_students_list yüklenemedi:", err);
+        if (!studentsList.length) {
+          const savedStudents = localStorage.getItem("teacher_students_list");
+          if (savedStudents) setStudentsList(JSON.parse(savedStudents));
         }
 
-        try {
-          if (!attendance.length) {
-            const savedAttendance = localStorage.getItem("teacher_attendance");
-            if (savedAttendance) setAttendance(JSON.parse(savedAttendance));
-          }
-        } catch (err) {
-          console.warn("teacher_attendance yüklenemedi:", err);
+        if (!attendance.length) {
+          const savedAttendance = localStorage.getItem("teacher_attendance");
+          if (savedAttendance) setAttendance(JSON.parse(savedAttendance));
         }
 
       } catch (err) {
@@ -352,7 +344,8 @@ export default function TeacherPanel() {
       return;
     }
 
-    const payloadStr = encodeURIComponent(JSON.stringify({ sessionId: sessionObj.sessionId, expiresAt: sessionObj.expiresAt, sig: sessionObj.sig }));
+    const payloadWithDevice = { ...sessionObj, deviceId: generateDeviceId() };
+    const payloadStr = encodeURIComponent(JSON.stringify(payloadWithDevice));
     const sessionStr = `&sessionInfo=${encodeURIComponent(JSON.stringify(sessionObj))}`;
     const newTabUrl = `/student?payload=${payloadStr}&returnUrl=${encodeURIComponent("/teacher")}${sessionStr}`;
 
@@ -429,20 +422,18 @@ export default function TeacherPanel() {
             <thead>
               <tr>
                 <th>Öğrenci Numarası</th>
-                <th>Öğrenci Adı</th>
+                <th>Adı Soyadı</th>
                 <th>Var / Yok</th>
-                <th>Tarih</th>
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map(student => {
-                const rec = attendance.find(a => a.studentId === student.id);
+              {filteredStudents.map(s => {
+                const rec = attendance.find(a => a.studentId === s.id);
                 return (
-                  <tr key={student.id}>
-                    <td>{student.id}</td>
-                    <td>{student.name}</td>
+                  <tr key={s.id}>
+                    <td>{s.id}</td>
+                    <td>{s.name}</td>
                     <td>{rec && rec.timestamp ? "✅" : "❌"}</td>
-                    <td>{rec && rec.timestamp ? new Date(rec.timestamp).toLocaleString() : ""}</td>
                   </tr>
                 );
               })}

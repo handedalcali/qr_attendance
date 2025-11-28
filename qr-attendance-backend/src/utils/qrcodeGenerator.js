@@ -1,21 +1,34 @@
+const Session = require('../models/Session');
+const Attendance = require('../models/Attendance');
 const QRCode = require('qrcode');
+const { sign } = require('../utils/security');
 
-/**
- * Verilen metinden Base64 formatında QR kodu Data URL'si oluşturur.
- * @param {string} text QR kodun içereceği metin (Bu bizim tam URL'imiz olacak).
- * @returns {Promise<string>} Base64 Data URL
- */
-exports.genDataUrl = async (text) => {
-    try {
-        // KRİTİK: text'in tam HTTP/HTTPS URL'si olması gerekir.
-        // qrcode kütüphanesi, tam URL gördüğünde otomatik olarak link formatında QR üretir.
-        return await QRCode.toDataURL(text, {
-            errorCorrectionLevel: 'H',
-            type: 'image/png',
-            margin: 1, 
-        });
-    } catch (err) {
-        console.error('QR code generation failed:', err);
-        throw new Error('QR kodu oluşturulamadı.');
-    }
-};
+async function generateSessionQr(sessionId) {
+  const session = await Session.findOne({ sessionId });
+  if (!session) throw new Error("Session bulunamadı");
+
+  // Öğrenci yoklamasını çek
+  const attendanceRecords = await Attendance.find({ sessionId });
+  const attendancePayload = attendanceRecords.map(a => ({
+    studentId: a.studentId,
+    name: a.studentName,
+    deviceId: a.deviceId,      // deviceId ekledik
+    present: true,
+    timestamp: a.timestamp
+  }));
+
+  const payload = {
+    sessionId,
+    expiresAt: session.expiresAt,
+    attendance: attendancePayload
+  };
+
+  // İmzala
+  payload.sig = sign(JSON.stringify(payload));
+
+  // QR oluştur
+  const dataUrl = await QRCode.toDataURL(JSON.stringify(payload), { errorCorrectionLevel: 'H' });
+  return { payload, dataUrl };
+}
+
+module.exports = { generateSessionQr };
