@@ -1,10 +1,9 @@
 // StudentScanner.jsx
 import React, { useEffect, useState, useRef } from "react";
-import QrReader from "react-qr-reader";
 import { useLocation } from "react-router-dom";
 import { markAttendance } from "../api";
 
-export default function StudentScanner({ studentsList = [] }) { // studentsList props olarak geliyor
+export default function StudentScanner({ studentsList = [] }) {
   const location = useLocation();
 
   const [studentId, setStudentId] = useState("");
@@ -16,10 +15,13 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
 
   const isMountedRef = useRef(true);
 
+  // ---------- QR PAYLOAD YÜKLEME ----------
   useEffect(() => {
     isMountedRef.current = true;
+
     const params = new URLSearchParams(location.search);
     const payloadJson = params.get("payload");
+
     if (payloadJson) {
       try {
         const parsed = JSON.parse(decodeURIComponent(payloadJson));
@@ -36,12 +38,15 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
     } else {
       setMessage("Geçerli bir session yok.");
     }
+
     return () => {
       isMountedRef.current = false;
     };
   }, [location]);
 
+  // ---------- NORMALİZE FONKSİYONLAR ----------
   const normalizeId = (id) => String(id || "").trim();
+
   const normalizeName = (name) => {
     if (!name) return "";
     return String(name)
@@ -59,15 +64,21 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
 
   const normalizePayload = (input) => {
     if (!input) return null;
+
     if (typeof input === "object") {
       if (input.sessionId) return input;
       if (input._id) return { sessionId: input._id };
     }
+
     const s = String(input).trim();
     if (!s) return null;
+
     if (s.startsWith("{") && s.endsWith("}")) {
-      try { return JSON.parse(s); } catch {}
+      try {
+        return JSON.parse(s);
+      } catch {}
     }
+
     if (s.includes("payload=")) {
       try {
         const url = new URL(s);
@@ -75,14 +86,15 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
         if (p) return JSON.parse(decodeURIComponent(p));
       } catch {}
     }
+
     return { sessionId: s };
   };
 
-  const handleMark = async (payloadOverride) => {
+  // ---------- YOKLAMA GÖNDER ----------
+  const handleMark = async () => {
     if (success) return;
 
-    const payloadToUse = payloadOverride || qrPayload;
-    if (!payloadToUse) {
+    if (!qrPayload) {
       setMessage("QR payload eksik.");
       return;
     }
@@ -95,25 +107,30 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
       return;
     }
 
-    // **ID ve isim kontrolü**
-    const studentRecord = studentsList.find(s =>
-      normalizeId(s.id) === normalizeId(studentId) &&
-      normalizeName(s.name) === normalizeName(studentName)
+    // ---- YOKLAMA LİSTESİ KONTROLÜ ----
+    const normalizedId = normalizeId(studentId);
+    const normalizedName = normalizeName(studentName);
+
+    const isValidStudent = studentsList.some(
+      (s) =>
+        normalizeId(s.id) === normalizedId &&
+        normalizeName(s.name) === normalizedName
     );
-    if (!studentRecord) {
+
+    if (!isValidStudent) {
       setMessage("⚠️ Bu öğrenci yoklama listesinde yok veya bilgiler yanlış.");
       return;
     }
 
-    let normalized = normalizePayload(payloadToUse);
+    let normalized = normalizePayload(qrPayload);
     if (!normalized || !normalized.sessionId) {
       setMessage("QR payload geçersiz veya Session ID eksik.");
       return;
     }
 
-    // deviceId yoksa otomatik ekle
     if (!normalized.deviceId) {
-      normalized.deviceId = "dev_" + Math.random().toString(36).substring(2, 10);
+      normalized.deviceId =
+        "dev_" + Math.random().toString(36).substring(2, 10);
     }
 
     try {
@@ -122,26 +139,28 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
 
       const res = await markAttendance(
         normalized,
-        normalizeId(studentId),
-        normalizeName(studentName),
+        normalizedId,
+        normalizedName,
         normalized.deviceId
       );
 
       if (res?.ok || res?.success || res?.status === 200) {
-        setMessage("✅ Yoklama başarıyla alındı."); // tek mesaj
+        setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
         return;
-      } else {
-        setMessage("Hata: " + (res?.error || JSON.stringify(res)));
       }
+
+      setMessage("Hata: " + (res?.error || JSON.stringify(res)));
     } catch (err) {
       console.error("markAttendance error:", err);
+
       const status = err?.response?.status;
-      const dataErr = err?.response?.data?.error || err?.message || String(err);
+      const dataErr =
+        err?.response?.data?.error || err?.message || String(err);
 
       if (status === 409) {
         setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
-      } else if (status === 400 && typeof dataErr === "string" && dataErr.includes("dolmuş")) {
+      } else if (status === 400 && dataErr.includes("dolmuş")) {
         setMessage("❌ Oturum süresi dolmuş. Öğretmene danışın.");
       } else {
         setMessage("Sunucu hatası: " + dataErr);
@@ -151,22 +170,7 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
     }
   };
 
-  const handleScan = (data) => {
-    if (data) {
-      setQrPayload(data);
-      setMessage("QR kodu okundu. Yoklama için hazır.");
-      setSuccess(false);
-    }
-  };
-
-  const handleError = (err) => {
-    if (["NotAllowedError", "NotFoundError"].includes(err?.name)) {
-      setMessage("Kamera izni verilmedi veya cihazda kamera bulunamadı.");
-    } else {
-      setMessage("Tarayıcı hatası: " + (err?.message || String(err)));
-    }
-  };
-
+  // ---------- ARAYÜZ ----------
   return (
     <div className="student-scanner-container">
       <h2 className="scanner-title">Öğrenci Yoklama Girişi</h2>
@@ -191,27 +195,39 @@ export default function StudentScanner({ studentsList = [] }) { // studentsList 
         disabled={success}
       />
 
-      <label className="input-label">QR Kod Verisi (Manuel Giriş):</label>
+      {/* QR Tarayıcı butonu tamamen kaldırıldı */}
+
+      <label className="input-label">QR Kod Verisi:</label>
       <textarea
         rows={3}
-        value={typeof qrPayload === "object" ? JSON.stringify(qrPayload, null, 2) : qrPayload || ""}
+        value={
+          typeof qrPayload === "object"
+            ? JSON.stringify(qrPayload, null, 2)
+            : qrPayload || ""
+        }
         onChange={(e) => setQrPayload(e.target.value)}
-        placeholder="QR payload (JSON veya sadece Session ID veya tam URL)"
+        placeholder="QR payload (JSON, Session ID veya tam URL)"
         className="scanner-textarea"
         disabled={success}
       />
 
       <button
-        onClick={() => handleMark()}
+        onClick={handleMark}
         disabled={loading || !studentId || !studentName || !qrPayload || success}
         className={`scanner-button btn-primary ${
-          loading || !studentId || !studentName || !qrPayload || success ? "btn-disabled" : ""
+          loading || !studentId || !studentName || !qrPayload || success
+            ? "btn-disabled"
+            : ""
         }`}
       >
         {loading ? "Gönderiliyor..." : success ? "Kaydedildi" : "Yoklamayı Gönder"}
       </button>
 
-      {message && <p className="message-info" style={{ marginTop: 10 }}>{message}</p>}
+      {message && (
+        <p className="message-info" style={{ marginTop: 10 }}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }
