@@ -35,25 +35,23 @@ exports.markAttendance = async (req, res) => {
   try {
     let { qrPayload, sessionId: sessionIdFromBody, studentId, name, deviceId } = req.body;
 
-    // Zorunlu alan kontrolü: studentId ve name
+    // Zorunlu alan kontrolü
     if (!studentId || String(studentId).trim() === '') {
       return res.status(400).json({ error: 'Öğrenci numarası (ID) zorunludur.' });
     }
     if (!name || String(name).trim() === '') {
       return res.status(400).json({ error: 'Öğrenci adı (name) zorunludur.' });
     }
-
-    studentId = String(studentId).trim();
-    const studentName = normalizeName(name);
-
     if (!deviceId || String(deviceId).trim() === '') {
       return res.status(400).json({ error: 'deviceId zorunludur.' });
     }
-    deviceId = String(deviceId).trim();
 
+    studentId = String(studentId).trim();
+    const studentName = normalizeName(name);
+    deviceId = String(deviceId).trim();
     let sessionId = sessionIdFromBody;
 
-    // QR payload doğrulama ve yoklama gömme
+    // QR payload doğrulama
     if (qrPayload) {
       const parsed = tryParseJson(qrPayload);
       if (!parsed || !parsed.sessionId || !parsed.expiresAt || !parsed.sig) {
@@ -91,7 +89,7 @@ exports.markAttendance = async (req, res) => {
 
     if (!Array.isArray(session.students)) session.students = [];
 
-    // Öğrenci listesinde eşleşme kontrolü (büyük/küçük harf duyarsız)
+    // Öğrenci listesinde eşleşme kontrolü (ID ve normalize edilmiş isim)
     const studentFound = session.students.some(s => {
       const sid = String(s.id).trim();
       const sname = normalizeName(s.name);
@@ -125,7 +123,7 @@ exports.markAttendance = async (req, res) => {
     });
 
     // Session.students güncelle
-    const idx = session.students.findIndex(s => String(s.id) === studentId);
+    const idx = session.students.findIndex(s => String(s.id).trim() === studentId);
     if (idx > -1) {
       session.students[idx].name = studentName;
       session.students[idx].timestamp = new Date();
