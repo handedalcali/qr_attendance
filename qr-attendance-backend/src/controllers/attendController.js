@@ -15,98 +15,60 @@ function tryParseJson(s) {
   }
 }
 
-// Türkçe karakterleri normalize eden ve küçük harfe çeviren fonksiyon
-function normalizeName(name) {
-  if (!name) return '';
-  return String(name)
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLowerCase()
-    .replace(/İ/g, 'i')
-    .replace(/I/g, 'i')
-    .replace(/Ğ/g, 'g')
-    .replace(/Ü/g, 'u')
-    .replace(/Ş/g, 's')
-    .replace(/Ö/g, 'o')
-    .replace(/Ç/g, 'c');
-}
-
 exports.markAttendance = async (req, res) => {
   try {
     let { qrPayload, sessionId: sessionIdFromBody, studentId, name, deviceId } = req.body;
 
-    // Zorunlu alan kontrolü
-    if (!studentId || String(studentId).trim() === '') {
-      return res.status(400).json({ error: 'Öğrenci numarası (ID) zorunludur.' });
-    }
-    if (!name || String(name).trim() === '') {
-      return res.status(400).json({ error: 'Öğrenci adı (name) zorunludur.' });
-    }
-    if (!deviceId || String(deviceId).trim() === '') {
+    if (!deviceId || String(deviceId).trim() === "")
       return res.status(400).json({ error: 'deviceId zorunludur.' });
-    }
-
-    studentId = String(studentId).trim();
-    const studentName = normalizeName(name);
     deviceId = String(deviceId).trim();
+
+    if (studentId != null) studentId = String(studentId).trim();
+    if (!name || String(name).trim() === "")
+      return res.status(400).json({ error: 'Öğrenci adı (name) zorunludur.' });
+    const studentName = String(name).trim();
+
     let sessionId = sessionIdFromBody;
 
     // QR payload doğrulama
     if (qrPayload) {
       const parsed = tryParseJson(qrPayload);
-      if (!parsed || !parsed.sessionId || !parsed.expiresAt || !parsed.sig) {
+      if (!parsed || !parsed.sessionId || !parsed.expiresAt || !parsed.sig)
         return res.status(400).json({ error: 'QR kod geçersiz.' });
-      }
 
       if (!sessionId) sessionId = String(parsed.sessionId).trim();
       const payload = `${sessionId}|${parsed.expiresAt}`;
-      if (!verify(payload, parsed.sig)) {
+      if (!verify(payload, parsed.sig))
         return res.status(400).json({ error: 'QR kod imza hatası.' });
-      }
 
       const now = Date.now();
       if (now > Number(parsed.expiresAt)) {
         return res.status(400).json({ error: 'Oturum süresi dolmuş. Lütfen öğretmene danışın.' });
       }
 
-      // QR payload içine yoklamayı gömme
+      // QR payload içine yoklamayı gömme (isteğe bağlı)
       if (!parsed.attendance) parsed.attendance = [];
       parsed.attendance.push({ studentId, name: studentName, deviceId, timestamp: new Date().getTime() });
-      qrPayload = parsed; // güncel QR payload
+      qrPayload = parsed;
     }
 
-    if (!sessionId) {
-      return res.status(400).json({ error: 'Oturum kimliği eksik.' });
-    }
+    if (!sessionId || !studentId)
+      return res.status(400).json({ error: 'Eksik veri: Oturum kimliği veya öğrenci kimliği eksik.' });
 
     sessionId = String(sessionId).trim();
     const session = await Session.findOne({ sessionId });
     if (!session) return res.status(404).json({ error: 'Session bulunamadı' });
-
-    if (session.expiresAt && Date.now() > new Date(session.expiresAt).getTime()) {
+    if (session.expiresAt && Date.now() > new Date(session.expiresAt).getTime())
       return res.status(400).json({ error: 'Oturum süresi dolmuş veya geçersiz.' });
-    }
 
     if (!Array.isArray(session.students)) session.students = [];
 
-    // Öğrenci listesinde eşleşme kontrolü (ID ve normalize edilmiş isim)
-    const studentFound = session.students.some(s => {
-      const sid = String(s.id).trim();
-      const sname = normalizeName(s.name || s.fullname || '');
-      return sid === studentId && sname === studentName;
-    });
-
-    if (!studentFound) {
-      return res.status(400).json({ error: 'Bu dersi almıyorsun veya bilgiler yanlış. Yoklama alınamaz.' });
-    }
-
-    // Aynı cihazdan tekrar yoklama alınmasını engelle
+    // Aynı cihazdan tekrar yoklama alınmasını engelle ve güncelle
     const existing = await Attendance.findOne({ sessionId, studentId });
     if (existing) {
       if (existing.meta?.deviceId && existing.meta.deviceId !== deviceId) {
         return res.status(409).json({ error: 'Bu öğrenci zaten başka cihazdan yoklama aldı.' });
       }
-      // Aynı cihazdan tekrar ise timestamp ve isim güncelle
       existing.timestamp = new Date();
       existing.studentName = studentName;
       existing.meta = { ...existing.meta, deviceId, ip: req.ip, ua: req.get('User-Agent') };
@@ -123,12 +85,18 @@ exports.markAttendance = async (req, res) => {
     });
 
     // Session.students güncelle
-    const idx = session.students.findIndex(s => String(s.id).trim() === studentId);
-    if (idx > -1) {
-      session.students[idx].name = studentName;
-      session.students[idx].timestamp = new Date();
-      session.students[idx].deviceId = deviceId;
+    const alreadyInSession = session.students.some(s => String(s.id) === studentId);
+    if (!alreadyInSession) {
+      session.students.push({ id: studentId, name: studentName, timestamp: new Date(), deviceId });
       await session.save();
+    } else {
+      const idx = session.students.findIndex(s => String(s.id) === studentId);
+      if (idx > -1) {
+        session.students[idx].name = studentName;
+        session.students[idx].timestamp = new Date();
+        session.students[idx].deviceId = deviceId;
+        await session.save();
+      }
     }
 
     return res.json({ ok: true, message: 'Yoklama başarıyla kaydedildi :)', qrPayload });
