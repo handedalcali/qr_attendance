@@ -63,7 +63,7 @@ export default function StudentScanner() {
     return { sessionId: s };
   };
 
-  // İsim normalizasyonu: baş/son boşlukları temizle, çoklu boşlukları tek boşluğa düşür, küçük harfe çevir
+  // İsim normalizasyonu
   const normalizeName = (name) => {
     if (!name && name !== "") return "";
     return String(name)
@@ -89,27 +89,32 @@ export default function StudentScanner() {
       return;
     }
 
-    // Excel listesinden kontrol: önce ID var mı, sonra isim eşleşiyor mu (case-insensitive)
+    // Debug: localStorage’da kayıtlı öğrencileri kontrol et
     let storedStudents = [];
     try {
-      storedStudents = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
+      const rawList = localStorage.getItem("teacher_students_list");
+      console.log("localStorage teacher_students_list:", rawList);
+      storedStudents = JSON.parse(rawList || "[]");
     } catch (err) {
       console.warn("Excel listesi okunamadı:", err);
       storedStudents = [];
     }
 
-    // ID’leri normalize et: baştaki sıfırları sil, trim ve string
-    const idStr = String(studentId).replace(/^0+/, "").trim();
-    const foundById = storedStudents.find(s => String(s.id).replace(/^0+/, "").trim() === idStr);
+    const idStr = String(studentId).trim();
+    console.log("Giriş studentId:", studentId, "=> normalize:", idStr);
+
+    const foundById = storedStudents.find(s => String(s.id).trim() === idStr);
+    console.log("Bulunan kayıt:", foundById);
 
     if (!foundById) {
       setMessage("❌ Numaranız listede bulunamadı veya yanlış girdiniz.");
       return;
     }
 
-    // İsim kontrolü (büyük/küçük harf duyarsız, fazla boşluk duyarsız)
     const inputNameNorm = normalizeName(studentName);
     const storedNameNorm = normalizeName(foundById.name || "");
+    console.log("Giriş isim normalize:", inputNameNorm, "Listede kayıtlı:", storedNameNorm);
+
     if (!storedNameNorm) {
       setMessage("❌ Öğrenci adı listede eksik; lütfen öğretmene danışın.");
       return;
@@ -142,7 +147,7 @@ export default function StudentScanner() {
         // localStorage güncelle
         try {
           const studentsList = storedStudents.slice();
-          const exists = studentsList.some(s => String(s.id).replace(/^0+/, "").trim() === idStr);
+          const exists = studentsList.some(s => String(s.id).trim() === idStr);
           if (!exists) {
             studentsList.push({ id: idStr, name: String(studentName).trim() });
             localStorage.setItem("teacher_students_list", JSON.stringify(studentsList));
