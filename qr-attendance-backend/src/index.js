@@ -6,15 +6,21 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const { URL } = require('url');
 
+// Rota importları
 const sessionsRoute = require('./routes/sessions');
 const attendRoute = require('./routes/attend');
 
 const app = express();
 
+// TRUST_PROXY ayarı
 app.set('trust proxy', process.env.TRUST_PROXY === 'true');
 
+// -----------------------------
+// Middleware
+// -----------------------------
 app.use(helmet());
 
+// CSP header ekleme - base64 resimlere ve izin verilen frontendlere izin ver
 const rawFrontends = process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '';
 const allowedOrigins = rawFrontends.split(',').map(s => s.trim()).filter(Boolean);
 const connectSrcValue = "'self'" + (allowedOrigins.length ? ' ' + allowedOrigins.join(' ') : '');
@@ -31,6 +37,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate limit
 app.use(rateLimit({
   windowMs: 10000,
   max: 50,
@@ -43,6 +50,7 @@ app.use(rateLimit({
 
 app.use(express.json());
 
+// CORS
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -69,8 +77,12 @@ app.use((req, res, next) => {
   });
 });
 
+// Boş favicon route'u
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
+// -----------------------------
+// DB Bağlantısı
+// -----------------------------
 (async () => {
   try {
     await connectDB();
@@ -81,15 +93,23 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
   }
 })();
 
+// -----------------------------
+// ROTALAR
+// -----------------------------
 app.use('/api/sessions', sessionsRoute);
 app.use('/api/attend', attendRoute);
 
+// Sağlık kontrolü
 app.get('/health', (req, res) => res.json({ ok: true, env: process.env.NODE_ENV || 'development' }));
 
+// Global error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   if (!res.headersSent) res.status(500).json({ error: err.message || 'Sunucu hatası.' });
 });
 
+// -----------------------------
+// SERVER START
+// -----------------------------
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
