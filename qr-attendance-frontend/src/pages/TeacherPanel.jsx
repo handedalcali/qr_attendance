@@ -324,7 +324,6 @@ export default function TeacherPanel() {
   });
 
   const handleAddStudent = () => {
-    // **StudentScanner sayfasına yönlendirme eklendi (yeni sekmede açma)**
     let sessionObj = null;
 
     if (qrPayload && qrPayload.sessionId) {
@@ -357,7 +356,6 @@ export default function TeacherPanel() {
     const sessionStr = `&sessionInfo=${encodeURIComponent(JSON.stringify(sessionObj))}`;
     const newTabUrl = `/student?payload=${payloadStr}&returnUrl=${encodeURIComponent("/teacher")}${sessionStr}`;
 
-    // yeni sekmede aç
     window.open(newTabUrl, "_blank");
   };
 
@@ -427,19 +425,29 @@ export default function TeacherPanel() {
             <button className={filter === "absent" ? "active" : ""} onClick={() => setFilter("absent")}>Katılmayanlar</button>
           </div>
 
-          <ul className="attendance-list">
-            {filteredStudents.map((s, index) => {
-              const id = s.id;
-              const name = s.name;
-              const rec = attendance.find(a => (a.studentId === id));
-              return (
-                <li key={id || index} className="attendance-item">
-                  <div>{id} — {name}</div>
-                  <div>{rec && rec.timestamp ? "✅" : "—"}</div>
-                </li>
-              );
-            })}
-          </ul>
+          <table className="attendance-table">
+            <thead>
+              <tr>
+                <th>Öğrenci Numarası</th>
+                <th>Öğrenci Adı</th>
+                <th>Var / Yok</th>
+                <th>Tarih</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStudents.map(student => {
+                const rec = attendance.find(a => a.studentId === student.id);
+                return (
+                  <tr key={student.id}>
+                    <td>{student.id}</td>
+                    <td>{student.name}</td>
+                    <td>{rec && rec.timestamp ? "✅" : "❌"}</td>
+                    <td>{rec && rec.timestamp ? new Date(rec.timestamp).toLocaleString() : ""}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

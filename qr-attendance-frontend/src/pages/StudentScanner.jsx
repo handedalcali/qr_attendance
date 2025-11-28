@@ -63,7 +63,6 @@ export default function StudentScanner() {
     return { sessionId: s };
   };
 
-  // İsim normalizasyonu: baş/son boşlukları temizle, çoklu boşlukları tek boşluğa düşür, küçük harfe çevir
   const normalizeName = (name) => {
     if (!name && name !== "") return "";
     return String(name)
@@ -89,7 +88,6 @@ export default function StudentScanner() {
       return;
     }
 
-    // Excel listesinden kontrol: önce ID var mı, sonra isim eşleşiyor mu (case-insensitive)
     let storedStudents = [];
     try {
       storedStudents = JSON.parse(localStorage.getItem("teacher_students_list") || "[]");
@@ -106,12 +104,9 @@ export default function StudentScanner() {
       return;
     }
 
-    // İsim kontrolü (büyük/küçük harf duyarsız, fazla boşluk duyarsız)
     const inputNameNorm = normalizeName(studentName);
     const storedNameNorm = normalizeName(foundById.name || "");
     if (!storedNameNorm) {
-      // Eğer listede ad yoksa (kötü formatlı excel) — yine de kabul edebiliriz veya uyarabiliriz.
-      // Burada güvenlik için uyarı veriyoruz:
       setMessage("❌ Öğrenci adı listede eksik; lütfen öğretmene danışın.");
       return;
     }
@@ -130,19 +125,21 @@ export default function StudentScanner() {
       setLoading(true);
       setMessage("");
 
-      const res = await markAttendance(
-        normalized,
-        idStr,
-        String(studentName).trim()
-      );
+      // **QR + yoklama gömme çözümü entegre edildi**
+      const attendancePayload = {
+        ...normalized,
+        studentId: idStr,
+        name: String(studentName).trim(),
+        timestamp: new Date().toISOString()
+      };
+
+      const res = await markAttendance(attendancePayload, idStr, String(studentName).trim());
 
       if (res?.ok || res?.success || res?.status === 200) {
         setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
 
-        // localStorage güncelle
         try {
-          // students listesinde zaten bulunduğu için eklemeye gerek yok ama yine güvence:
           const studentsList = storedStudents.slice();
           const exists = studentsList.some(s => String(s.id).trim() === idStr);
           if (!exists) {
@@ -154,7 +151,7 @@ export default function StudentScanner() {
           const attendanceList = savedAttendance ? JSON.parse(savedAttendance) : [];
           const attendanceExists = attendanceList.some(a => a.studentId === idStr);
           if (!attendanceExists) {
-            attendanceList.push({ studentId: idStr, name: String(studentName).trim(), timestamp: new Date().toISOString() });
+            attendanceList.push(attendancePayload);
             localStorage.setItem("teacher_attendance", JSON.stringify(attendanceList));
           }
         } catch (e) {
