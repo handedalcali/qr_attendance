@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { markAttendance } = require('../controllers/attendController');
-const browserCheck = require('../middleware/browserCheck');
-const { verify } = require('../utils/security');
 
-router.post('/', browserCheck, (req, res, next) => {
+router.post('/', (req, res, next) => {
   try {
     const body = req.body || {};
     let { sessionId, studentId, name, qrPayload, deviceId, signature } = body;
@@ -48,9 +46,9 @@ router.post('/', browserCheck, (req, res, next) => {
       return res.status(400).json({ error: 'sessionId, studentId, name veya deviceId eksik' });
     }
 
-    // Device imza doğrulama
+    // Device imza doğrulama tamamen kapalı!
     // if (!signature || !verify(`${sessionId}|${studentId}|${deviceId}`, signature)) {
-      // return res.status(403).json({ error: 'Geçersiz veya yetkisiz cihaz' });
+    //   return res.status(403).json({ error: 'Geçersiz veya yetkisiz cihaz' });
     // }
 
     req.body = { sessionId, studentId, name, deviceId, qrPayload: body.qrPayload };

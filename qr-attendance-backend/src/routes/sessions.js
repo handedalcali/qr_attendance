@@ -6,21 +6,18 @@ const {
   regenerateQr,
   clearAttendance
 } = require('../controllers/sessionController');
-const browserCheck = require('../middleware/browserCheck');
+
 const { sign } = require('../utils/security');
 
 // Oturum oluşturma
-router.post('/', browserCheck, async (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
     const sessionData = await createSession(req, res, next);
 
-    // DeviceId ekle
     const deviceId = req.body.deviceId || 'dev_' + Math.random().toString(36).substring(2, 12);
 
-    // HMAC signature üret
     const signature = sign(`${sessionData._id}|${deviceId}`);
 
-    // Frontend’e DeviceId ve signature ile birlikte gönder
     res.json({ ...sessionData, deviceId, signature });
   } catch (err) {
     console.error('createSession error:', err);
@@ -28,13 +25,13 @@ router.post('/', browserCheck, async (req, res, next) => {
   }
 });
 
-// Yoklama bilgisi (tarayıcı kısıtlaması kontrolü)
-router.get('/:sessionId/students', browserCheck, getAttendance);
+// Yoklama bilgisi
+router.get('/:sessionId/students', getAttendance);
 
-// QR kod yenileme (tarayıcı kısıtlaması kontrolü)
-router.post('/:sessionId/qr', browserCheck, regenerateQr);
+// QR kod yenileme
+router.post('/:sessionId/qr', regenerateQr);
 
-// Yoklamayı temizleme (tarayıcı kısıtlaması kontrolü)
-router.post('/:sessionId/clear', browserCheck, clearAttendance);
+// Yoklamayı temizleme
+router.post('/:sessionId/clear', clearAttendance);
 
 module.exports = router;
