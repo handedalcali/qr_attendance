@@ -47,10 +47,10 @@ exports.markAttendance = async (req, res) => {
       return res.status(400).json({ error: 'Oturum süresi dolmuş veya geçersiz.' });
 
     // Aynı cihazdan başka öğrencinin yoklama kaydı var mı kontrol
-    const deviceUsed = await Attendance.findOne({ sessionId, 'meta.deviceId': deviceId });
-    if (deviceUsed && deviceUsed.studentId !== studentId) {
-      return res.status(403).json({ error: 'Bu cihazdan birden fazla kişi giriş yapamaz.' });
-    }
+    // const deviceUsed = await Attendance.findOne({ sessionId, 'meta.deviceId': deviceId });
+    // if (deviceUsed && deviceUsed.studentId !== studentId) {
+      // return res.status(403).json({ error: 'Bu cihazdan birden fazla kişi giriş yapamaz.' });
+    // }
 
     // Öğrenci daha önce yoklama yaptıysa güncelle
     const existing = await Attendance.findOne({ sessionId, studentId });
