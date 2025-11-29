@@ -4,7 +4,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
+const { URL } = require('url');
 
+// Rota importları
 const sessionsRoute = require('./routes/sessions');
 const attendRoute = require('./routes/attend');
 
@@ -18,15 +20,19 @@ app.set('trust proxy', process.env.TRUST_PROXY === 'true');
 // -----------------------------
 app.use(helmet());
 
-// CSP header - mobil ve tüm cihazlara izinli
+// CSP header
+const rawFrontends = process.env.FRONTEND_URLS || '';
+const allowedOrigins = rawFrontends.split(',').map(s => s.trim()).filter(Boolean);
+const connectSrcValue = "'self'" + (allowedOrigins.length ? ' ' + allowedOrigins.join(' ') : '');
+
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src * 'unsafe-inline' 'unsafe-eval'; " +
-    "img-src * data:; " +
-    "script-src * 'unsafe-inline' 'unsafe-eval'; " +
-    "style-src * 'unsafe-inline'; " +
-    "connect-src *;"
+    "default-src 'self'; " +
+    "img-src 'self' data:; " +
+    "script-src 'self'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    `connect-src ${connectSrcValue};`
   );
   next();
 });
@@ -43,14 +49,26 @@ app.use(rateLimit({
 app.use(express.json());
 
 // -----------------------------
-// CORS - tüm mobil cihaz ve tarayıcılar için
+// CORS
 // -----------------------------
-app.use(cors({
-  origin: "*",   // tüm cihaz ve tarayıcılara izin verir
+// -----------------------------
+// CORS
+// -----------------------------
+const corsOptions = {
+  origin: (origin, callback) => {
+    // origin boş ise (örn: Postman veya mobil cihazlar) izin ver
+    callback(null, true);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Client-Browser', 'X-Client-OS', 'X-Client-UA'],
   credentials: true,
-}));
+  optionsSuccessStatus: 200, // legacy tarayıcılar için
+};
+
+app.use(cors(corsOptions));
+
+// Preflight (OPTIONS) tüm route’larda çalışsın
+app.options('*', cors(corsOptions));
 
 // Boş favicon route'u
 app.get('/favicon.ico', (req, res) => res.status(204).end());
