@@ -51,24 +51,20 @@ app.use(express.json());
 // -----------------------------
 // CORS
 // -----------------------------
-// -----------------------------
-// CORS
-// -----------------------------
 const corsOptions = {
-  origin: (origin, callback) => {
-    // origin boş ise (örn: Postman veya mobil cihazlar) izin ver
-    callback(null, true);
-  },
+  origin: true, // tüm originlere izin verir (development/test için)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Client-Browser', 'X-Client-OS', 'X-Client-UA'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-Client-Browser',
+    'X-Client-OS',
+    'X-Client-UA'
+  ],
   credentials: true,
-  optionsSuccessStatus: 200, // legacy tarayıcılar için
 };
-
 app.use(cors(corsOptions));
-
-// Preflight (OPTIONS) tüm route’larda çalışsın
-app.options('*', cors(corsOptions));
 
 // Boş favicon route'u
 app.get('/favicon.ico', (req, res) => res.status(204).end());
