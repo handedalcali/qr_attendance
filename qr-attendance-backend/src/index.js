@@ -4,9 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
-const { URL } = require('url');
 
-// Rota importları
 const sessionsRoute = require('./routes/sessions');
 const attendRoute = require('./routes/attend');
 
@@ -20,19 +18,15 @@ app.set('trust proxy', process.env.TRUST_PROXY === 'true');
 // -----------------------------
 app.use(helmet());
 
-// CSP header
-const rawFrontends = process.env.FRONTEND_URLS || '';
-const allowedOrigins = rawFrontends.split(',').map(s => s.trim()).filter(Boolean);
-const connectSrcValue = "'self'" + (allowedOrigins.length ? ' ' + allowedOrigins.join(' ') : '');
-
+// CSP header - mobil ve tüm cihazlara izinli
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; " +
-    "img-src 'self' data:; " +
-    "script-src 'self'; " +
-    "style-src 'self' 'unsafe-inline'; " +
-    `connect-src ${connectSrcValue};`
+    "default-src * 'unsafe-inline' 'unsafe-eval'; " +
+    "img-src * data:; " +
+    "script-src * 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src * 'unsafe-inline'; " +
+    "connect-src *;"
   );
   next();
 });
@@ -49,22 +43,14 @@ app.use(rateLimit({
 app.use(express.json());
 
 // -----------------------------
-// CORS
+// CORS - tüm mobil cihaz ve tarayıcılar için
 // -----------------------------
-const corsOptions = {
-  origin: true, // tüm originlere izin verir (development/test için)
+app.use(cors({
+  origin: "*",   // tüm cihaz ve tarayıcılara izin verir
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'X-Client-Browser',
-    'X-Client-OS',
-    'X-Client-UA'
-  ],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-};
-app.use(cors(corsOptions));
+}));
 
 // Boş favicon route'u
 app.get('/favicon.ico', (req, res) => res.status(204).end());
