@@ -1,3 +1,4 @@
+// Updated StudentScanner.jsx with disabled-but-visible fields & preserved payload display
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useHistory } from "react-router-dom";
 import { markAttendance } from "../api";
@@ -103,7 +104,6 @@ export default function StudentScanner() {
         setMessage("✅ Yoklama başarıyla alındı.");
         setSuccess(true);
 
-        // Başarı sayfasına yönlendir
         history.push(`/yoklama-basarili?sessionId=${normalized.sessionId}`);
         return;
       }
@@ -121,14 +121,7 @@ export default function StudentScanner() {
 
   return (
     <div className="student-scanner-container">
-      <h2
-        className="scanner-title"
-        style={{
-          cursor: "default",
-          userSelect: "none",
-          pointerEvents: "none",
-        }}
-      >
+      <h2 className="scanner-title" style={{ userSelect: "none", pointerEvents: "none" }}>
         Öğrenci Yoklama Girişi
       </h2>
 
@@ -150,18 +143,21 @@ export default function StudentScanner() {
         disabled={success}
       />
 
-      <label className="input-label">QR Kod Verisi:</label>
+     { /*<label className="input-label">QR Kod Verisi:</label>
       <textarea
         rows={3}
-        value={
-          typeof qrPayload === "object"
-            ? JSON.stringify(qrPayload, null, 2)
-            : qrPayload || ""
-        }
-        onChange={(e) => setQrPayload(e.target.value)}
+        value={qrPayload ? (typeof qrPayload === "object" ? JSON.stringify(qrPayload, null, 2) : qrPayload) : ""}
         className="scanner-textarea"
-        disabled={success}
-      />
+        onChange={(e) => {
+          try {
+            // JSON ise objeye çevir
+            const val = e.target.value;
+            setQrPayload(val); // qrPayload state setter fonksiyonunu kullan
+          } catch (err) {
+            console.error("Geçersiz QR kod JSON formatı");
+          }
+        }}
+      />*/ }
 
       <button
         onClick={handleMark}
@@ -171,11 +167,7 @@ export default function StudentScanner() {
         {loading ? "Gönderiliyor..." : "Yoklamayı Gönder"}
       </button>
 
-      {message && (
-        <p className="message-info" style={{ marginTop: 10 }}>
-          {message}
-        </p>
-      )}
+      {message && <p className="message-info" style={{ marginTop: 10 }}>{message}</p>}
     </div>
   );
 }

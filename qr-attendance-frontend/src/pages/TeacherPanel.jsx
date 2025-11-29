@@ -167,7 +167,7 @@ export default function TeacherPanel() {
     const sheetData = studentsList.map(student => {
       const id = student.id || student.studentId || student.studentNumber || "";
       const record = byId[String(id)];
-      return { "Öğrenci Numarası": id || "", "Öğrenci Adı Soyadı": student.name || "", "Tarih": record && record.timestamp ? new Date(record.timestamp).toLocaleString() : "", "Var / Yok": record && record.timestamp ? "✅" : "❌" };
+      return { "Öğrenci Numarası": id || "", "Öğrenci Adı Soyadı": student.name || "", "Tarih": record && record.timestamp ? new Date(record.timestamp).toLocaleString() : "", "Var / Yok": record && record.timestamp ? "Var" : "Yok" };
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(sheetData, { header: ["Öğrenci Numarası", "Öğrenci Adı Soyadı", "Tarih", "Var / Yok"] });

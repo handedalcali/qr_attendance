@@ -1,13 +1,20 @@
 const mongoose = require('mongoose');
 
-module.exports = async function connectDB() {
-  const uri = process.env.MONGO_URI;
-  if (!uri) throw new Error('MONGO_URI yok .env içine ekle');
+async function connectDB() {
+  const isLocal = process.env.LOCAL_MONGO === 'true';
+  const mongoUri = isLocal ? process.env.LOCAL_MONGO_URI : process.env.ATLAS_MONGO_URI;
+
   try {
-    await mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    console.log('MongoDB bağlı');
+    await mongoose.connect(mongoUri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 30000, // 30 saniye
+    });
+    console.log(`MongoDB connected (${isLocal ? 'Local' : 'Atlas'})`);
   } catch (err) {
-    console.error('MongoDB bağlanamadı', err);
-    process.exit(1);
+    console.error(`MongoDB connection failed (${isLocal ? 'Local' : 'Atlas'}):`, err.message || err);
+    // Crash etme, sadece logla
   }
-};
+}
+
+module.exports = connectDB;

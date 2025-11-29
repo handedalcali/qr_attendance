@@ -20,8 +20,8 @@ app.set('trust proxy', process.env.TRUST_PROXY === 'true');
 // -----------------------------
 app.use(helmet());
 
-// CSP header ekleme - base64 resimlere ve izin verilen frontendlere izin ver
-const rawFrontends = process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '';
+// CSP header
+const rawFrontends = process.env.FRONTEND_URLS || '';
 const allowedOrigins = rawFrontends.split(',').map(s => s.trim()).filter(Boolean);
 const connectSrcValue = "'self'" + (allowedOrigins.length ? ' ' + allowedOrigins.join(' ') : '');
 
@@ -43,39 +43,28 @@ app.use(rateLimit({
   max: 50,
   standardHeaders: true,
   legacyHeaders: false,
-  handler: (req, res) => {
-    res.status(429).json({ error: 'Çok fazla istek. Lütfen bekleyin.' });
-  }
+  handler: (req, res) => res.status(429).json({ error: 'Çok fazla istek. Lütfen bekleyin.' })
 }));
 
 app.use(express.json());
 
+// -----------------------------
 // CORS
+// -----------------------------
 const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    try {
-      const u = new URL(origin);
-      if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return callback(null, true);
-    } catch {}
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`CORS policy: origin not allowed - ${origin}`));
-  },
+  origin: true, // tüm originlere izin verir (development/test için)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-Client-Browser',
+    'X-Client-OS',
+    'X-Client-UA'
+  ],
   credentials: true,
-  optionsSuccessStatus: 204,
 };
-app.use((req, res, next) => {
-  cors(corsOptions)(req, res, (err) => {
-    if (err) {
-      console.warn('CORS error:', err.message);
-      res.status(403).json({ error: 'CORS error: ' + err.message });
-      return;
-    }
-    next();
-  });
-});
+app.use(cors(corsOptions));
 
 // Boş favicon route'u
 app.get('/favicon.ico', (req, res) => res.status(204).end());
@@ -83,15 +72,10 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 // -----------------------------
 // DB Bağlantısı
 // -----------------------------
-(async () => {
-  try {
-    await connectDB();
-    console.log('Database connected successfully');
-  } catch (err) {
-    console.error('Database connection failed:', err);
-    process.exit(1);
-  }
-})();
+connectDB().then(() => console.log('Database init done')).catch(err => {
+  console.error('DB connection failed:', err);
+  process.exit(1);
+});
 
 // -----------------------------
 // ROTALAR
@@ -112,4 +96,4 @@ app.use((err, req, res, next) => {
 // SERVER START
 // -----------------------------
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Server listening on ${PORT}`));

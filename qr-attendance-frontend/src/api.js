@@ -1,10 +1,39 @@
 import axios from "axios";
 
+// Tarayıcı bilgilerini toplayan yardımcı fonksiyon
+function getBrowserInfo() {
+  const ua = navigator.userAgent || "Unknown";
+  let browser = "Unknown";
+  let os = "Unknown";
+
+  if (ua.includes("Chrome")) browser = "Chrome";
+  if (ua.includes("Firefox")) browser = "Firefox";
+  if (ua.includes("Edg")) browser = "Edge";
+  if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+
+  if (ua.includes("Win")) os = "Windows";
+  else if (ua.includes("Mac")) os = "MacOS";
+  else if (ua.includes("Linux")) os = "Linux";
+  else if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+
+  return { browser, os, ua };
+}
+
 // Axios instance
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || "http://localhost:4000/api",
   headers: { "Content-Type": "application/json" },
   timeout: 10000,
+});
+
+// 🔥 Tüm isteklere otomatik browser bilgisi ekleme
+api.interceptors.request.use((config) => {
+  const info = getBrowserInfo();
+  config.headers["X-Client-Browser"] = info.browser;
+  config.headers["X-Client-OS"] = info.os;
+  config.headers["X-Client-UA"] = info.ua;
+  return config;
 });
 
 // Helper: Device ID ekle
@@ -25,7 +54,8 @@ export async function createSession(durationMinutes = 10, createdBy = "", course
     const res = await api.post("/sessions", body);
     if (res.data.qrText) {
       const parsed = JSON.parse(res.data.qrText);
-      res.data.qrText = JSON.stringify(addDeviceId(parsed));
+      const payloadWithDevice = addDeviceId(parsed);
+      res.data.qrText = JSON.stringify(payloadWithDevice); // signature backend tarafından oluşturulacak
     }
     return res.data;
   } catch (err) {
@@ -50,12 +80,15 @@ export async function markAttendance(normalizedPayload, studentId, studentName) 
 
   const payloadWithDevice = addDeviceId(normalizedPayload);
 
-  const body = payloadWithDevice.sig
-    ? { qrPayload: payloadWithDevice, studentId: String(studentId).trim(), name: String(studentName).trim() }
-    : { sessionId: payloadWithDevice.sessionId, studentId: String(studentId).trim(), name: String(studentName).trim() };
+  const body = {
+    sessionId: payloadWithDevice.sessionId,
+    studentId: String(studentId).trim(),
+    name: String(studentName).trim(),
+    deviceId: payloadWithDevice.deviceId
+  };
 
   try {
-    const res = await api.post("/attend", body);
+    const res = await api.post("/attend", body); // backend burada HMAC ile imzayı kontrol edecek
     return res.data;
   } catch (err) {
     handleAxiosError(err, "markAttendance");
@@ -69,7 +102,8 @@ export async function regenerateQr(sessionId, durationMinutes = 10) {
     const res = await api.post(`/sessions/${encodeURIComponent(sessionId)}/qr`, { durationMinutes });
     if (res.data.qrText) {
       const parsed = JSON.parse(res.data.qrText);
-      res.data.qrText = JSON.stringify(addDeviceId(parsed));
+      const payloadWithDevice = addDeviceId(parsed);
+      res.data.qrText = JSON.stringify(payloadWithDevice);
     }
     return res.data;
   } catch (err) {

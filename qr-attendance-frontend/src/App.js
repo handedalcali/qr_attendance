@@ -38,7 +38,6 @@ const SuccessPage = () => {
           Oturum Kodu: <strong>{sessionId}</strong>
         </p>
       )}
-      <Link to="/student" className="success-home-button">Ana Sayfaya Dön</Link>
     </div>
   );
 };
