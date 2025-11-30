@@ -21,89 +21,106 @@ function normalizeName(name) {
     .replace(/\s+/g, " ")
     .toLowerCase()
     .replace(/İ/g, "i")
-    .replace(/I/g, "ı") // Türkçe I -> ı dönüşümü
+    .replace(/I/g, "ı")
     .replace(/i/g, "i")
     .replace(/Ğ/g, "g")
     .replace(/Ü/g, "u")
     .replace(/Ş/g, "s")
     .replace(/Ö/g, "o")
     .replace(/Ç/g, "c")
-    .replace(/ı/g, "i"); // Son olarak ı ve i'yi eşitlemek için
+    .replace(/ı/g, "i");
 }
 
 exports.markAttendance = async (req, res) => {
   try {
     let { qrPayload, sessionId: sessionIdFromBody, studentId, name, deviceId } = req.body;
 
-    if (!deviceId?.trim()) return res.status(400).json({ error: 'deviceId zorunludur.' });
-    if (!studentId?.trim()) return res.status(400).json({ error: 'Öğrenci numarası zorunludur.' });
-    if (!name?.trim()) return res.status(400).json({ error: 'İsim Soyisim zorunludur.' });
+    // ZORUNLU PARAMETRELER
+    if (!deviceId?.trim()) return res.status(400).json({ error: "deviceId zorunludur." });
+    if (!studentId?.trim()) return res.status(400).json({ error: "Öğrenci numarası zorunludur." });
+    if (!name?.trim()) return res.status(400).json({ error: "İsim Soyisim zorunludur." });
 
     studentId = String(studentId).trim();
     const studentName = String(name).trim();
     deviceId = String(deviceId).trim();
 
-    // QR Payload çözümleme
+    // QR PAYLOAD ÇÖZÜMLEME
     let sessionId = sessionIdFromBody;
     if (qrPayload) {
       const parsed = tryParseJson(qrPayload);
       if (parsed?.sessionId) sessionId = String(parsed.sessionId).trim();
     }
 
-    if (!sessionId) return res.status(400).json({ error: 'Geçersiz QR kodu: Oturum ID bulunamadı.' });
+    if (!sessionId)
+      return res.status(400).json({ error: "Geçersiz QR kodu: Oturum ID bulunamadı." });
 
-    // Oturumu bul
+    // OTURUMU BUL
     const session = await Session.findOne({ sessionId });
-    
-    if (!session) return res.status(404).json({ error: 'Böyle bir yoklama oturumu bulunamadı.' });
-    
-    // Süre kontrolü
+
+    if (!session)
+      return res.status(404).json({ error: "Böyle bir yoklama oturumu bulunamadı." });
+
+    // SÜRE KONTROLÜ
     if (session.expiresAt && Date.now() > new Date(session.expiresAt).getTime()) {
-      return res.status(400).json({ error: 'Bu yoklamanın süresi dolmuş.' });
+      return res.status(400).json({ error: "Bu yoklamanın süresi dolmuş." });
     }
 
-    // 1️⃣ KONTROL: Mükerrer Kayıt (Önce bunu kontrol etmek veritabanı yormamak için iyidir)
-    // Öğrenci bu session için daha önce kayıt atmış mı?
-    const existing = await Attendance.findOne({ sessionId, studentId });
-    if (existing) {
-      return res.status(409).json({ 
-        error: '⚠️ Bu numara ile zaten yoklama alındı! Tekrar giriş yapamazsınız.' 
+    // 1️⃣ AYNI CİHAZLA TEKRAR GİRİŞ ENGELİ
+    const deviceExists = await Attendance.findOne({
+      sessionId,
+      "meta.deviceId": deviceId,
+    });
+
+    if (deviceExists) {
+      return res.status(409).json({
+        error: "⚠️ Bu cihaz ile zaten yoklama alınmış. Tekrar giriş yapılamaz.",
       });
     }
 
-    // 2️⃣ KONTROL: Liste Doğrulaması (Excel Eşleşmesi)
-    // Session modelinde 'students' array'i olduğunu ve Excel verisinin orada olduğunu varsayıyoruz.
-    // Eğer students listesi boşsa (Excel yüklenmediyse) herkesi kabul etmek istersen buraya bir if ekleyebilirsin.
+    // 2️⃣ AYNI NUMARA İLE TEKRAR GİRİŞ ENGELİ
+    const existing = await Attendance.findOne({ sessionId, studentId });
+
+    if (existing) {
+      return res.status(409).json({
+        error: "⚠️ Bu numara ile zaten yoklama alındı! Tekrar giriş yapamazsınız.",
+      });
+    }
+
+    // 3️⃣ LİSTE EŞLEŞMESİ (Excel doğrulaması)
     if (session.students && session.students.length > 0) {
-      const validStudent = session.students.find(s => {
-        // Hem numara hem isim normalizasyonu yaparak karşılaştır
+      const validStudent = session.students.find((s) => {
         const idMatch = String(s.id || s.studentId).trim() === studentId;
         const nameMatch = normalizeName(s.name) === normalizeName(studentName);
         return idMatch && nameMatch;
       });
 
       if (!validStudent) {
-        // İsim ve numara eşleşmediği için 404 dönüyoruz (Client tarafında yakalamak için)
         return res.status(404).json({
           ok: false,
           match: false,
-          error: '❌ Girdiğiniz bilgiler (İsim + Numara) sınıf listesiyle eşleşmedi.'
+          error: "❌ Girdiğiniz öğrenci numarası ve isim eşleşmiyor.",
         });
       }
     }
 
-    // 3️⃣ KAYIT: Her şey yolunda, veritabanına yaz
+    // 4️⃣ KAYIT OLUŞTUR
     await Attendance.create({
       sessionId,
       studentId,
       studentName,
-      meta: { deviceId, ip: req.ip, ua: req.get('User-Agent') },
+      meta: {
+        deviceId,
+        ip: req.ip,
+        ua: req.get("User-Agent"),
+      },
     });
 
-    return res.status(200).json({ ok: true, message: '✅ Yoklama başarıyla kaydedildi.' });
-
+    return res.status(200).json({
+      ok: true,
+      message: "✅ Yoklama başarıyla kaydedildi.",
+    });
   } catch (err) {
-    console.error('markAttendance error:', err);
-    return res.status(500).json({ error: 'Sunucu hatası: İşlem gerçekleştirilemedi.' });
+    console.error("markAttendance error:", err);
+    return res.status(500).json({ error: "Sunucu hatası: İşlem gerçekleştirilemedi." });
   }
 };
