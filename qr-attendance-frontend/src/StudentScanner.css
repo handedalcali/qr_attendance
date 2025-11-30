@@ -1,89 +1,100 @@
 .student-scanner-container {
-  max-width: 500px;
-  margin: 40px auto;
-  padding: 30px 25px;
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  transition: all 0.3s ease;
+  max-width: 480px;
+  margin: 50px auto;
+  padding: 32px 28px;
+  background: #fafafa;
+  border-radius: 18px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+  font-family: "Inter", "Segoe UI", sans-serif;
+  transition: 0.3s ease;
+  border: 1px solid #e6e6e6;
 }
 
 .student-scanner-container h2 {
   text-align: center;
-  font-size: 26px;
-  color: #333;
-  margin-bottom: 25px;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 28px;
+  color: #2c2c2c;
 }
 
+/* Label */
 .student-scanner-container label {
   display: block;
+  margin-bottom: 6px;
   font-weight: 600;
-  margin-bottom: 5px;
-  color: #555;
+  font-size: 14px;
+  color: #444;
 }
 
+/* Input */
 .student-scanner-container input[type="text"] {
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 20px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  padding: 14px 14px;
+  margin-bottom: 22px;
+  border-radius: 12px;
+  border: 1px solid #dcdcdc;
   font-size: 16px;
-  transition: all 0.2s ease;
+  background: #fff;
+  transition: all 0.25s ease;
+  box-sizing: border-box;
 }
 
 .student-scanner-container input[type="text"]:focus {
   border-color: #4CAF50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.25);
   outline: none;
 }
 
 .student-scanner-container input.input-error {
   border: 2px solid #e74c3c;
   animation: shake 0.3s;
+  background: #fff5f5;
 }
 
+/* Button */
 .student-scanner-container button {
   width: 100%;
-  padding: 12px 0;
-  background-color: #4CAF50;
+  padding: 14px 0;
+  background: linear-gradient(135deg, #4CAF50, #3f9b48);
   color: white;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: 0.25s ease;
 }
 
 .student-scanner-container button:hover:not(:disabled) {
-  background-color: #45a049;
+  background: linear-gradient(135deg, #45a049, #3a8d43);
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
 }
 
 .student-scanner-container button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
+/* Messages */
 .student-scanner-container p {
-  margin-top: 15px;
+  margin-top: 14px;
   font-weight: 500;
   text-align: center;
-  color: #555;
+  color: #666;
 }
 
 .student-scanner-container p.message-error {
   color: #e74c3c;
-  font-weight: bold;
+  font-weight: 600;
 }
 
+/* Shake Animation */
 @keyframes shake {
   0% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(5px); }
-  75% { transform: translateX(-5px); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-4px); }
   100% { transform: translateX(0); }
 }
