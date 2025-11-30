@@ -9,6 +9,6 @@ const AttendanceSchema = new mongoose.Schema({
   meta: { type: Object }
 });
 
-AttendanceSchema.index({ sessionId: 1, studentId: 1, deviceId: 1 }, { unique: true });
+AttendanceSchema.index({ sessionId: 1, studentId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Attendance', AttendanceSchema);

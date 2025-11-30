@@ -1,3 +1,5 @@
+// TeacherPanel.jsx
+import '../TeacherPanel.css';
 import React, { useState, useEffect } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import * as XLSX from "xlsx";
@@ -22,6 +24,20 @@ function formatExpiry(expiresAt) {
 
 function generateDeviceId() {
   return 'dev_' + Math.random().toString(36).substring(2, 10);
+}
+
+function normalizeName(name) {
+  return String(name || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase()
+    .replace(/İ/g, "i")
+    .replace(/I/g, "i")
+    .replace(/Ğ/g, "g")
+    .replace(/Ü/g, "u")
+    .replace(/Ş/g, "s")
+    .replace(/Ö/g, "o")
+    .replace(/Ç/g, "c");
 }
 
 export default function TeacherPanel() {
@@ -162,12 +178,22 @@ export default function TeacherPanel() {
   // Download attendance
   const handleDownloadAttendance = () => {
     if (!studentsList.length && !attendance.length) { setMsg("İndirilecek öğrenci listesi yok."); return; }
-    const byId = {};
-    attendance.forEach(r => { const sid = r.studentId || r.id || r._id || ""; if (sid) byId[String(sid)] = r; });
+    const byIdName = {};
+    attendance.forEach(r => { 
+      const sid = r.studentId || r.id || r._id || ""; 
+      const sName = r.studentName ? normalizeName(r.studentName) : ""; 
+      if (sid && sName) byIdName[`${sid}|${sName}`] = r; 
+    });
     const sheetData = studentsList.map(student => {
       const id = student.id || student.studentId || student.studentNumber || "";
-      const record = byId[String(id)];
-      return { "Öğrenci Numarası": id || "", "Öğrenci Adı Soyadı": student.name || "", "Tarih": record && record.timestamp ? new Date(record.timestamp).toLocaleString() : "", "Var / Yok": record && record.timestamp ? "Var" : "Yok" };
+      const nameNorm = normalizeName(student.name || "");
+      const record = byIdName[`${id}|${nameNorm}`];
+      return { 
+        "Öğrenci Numarası": id || "", 
+        "Öğrenci Adı Soyadı": student.name || "", 
+        "Tarih": record && record.timestamp ? new Date(record.timestamp).toLocaleString() : "", 
+        "Var / Yok": record && record.timestamp ? "Var" : "Yok" 
+      };
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(sheetData, { header: ["Öğrenci Numarası", "Öğrenci Adı Soyadı", "Tarih", "Var / Yok"] });
@@ -239,7 +265,7 @@ export default function TeacherPanel() {
   };
 
   const filteredStudents = studentsList.filter(s => {
-    const rec = attendance.find(a => a.studentId === s.id);
+    const rec = attendance.find(a => a.studentId === s.id && normalizeName(a.studentName) === normalizeName(s.name));
     if (filter === "present") return rec && rec.timestamp;
     if (filter === "absent") return !rec || !rec.timestamp;
     return true;
@@ -271,7 +297,7 @@ export default function TeacherPanel() {
 
       <div className="control-group vertical">
         <label>Oturum Süresi (dakika):</label>
-        <input type="number" value={duration} onChange={e => setDuration(e.target.value)} min={1} className="duration-input" />
+        <input type="number" value={duration} onChange={e => setDuration(e.target.value)} min={1} max={140} className="duration-input" />
       </div>
 
       <div className="control-group vertical">
@@ -331,7 +357,7 @@ export default function TeacherPanel() {
             </thead>
             <tbody>
               {filteredStudents.map(s => {
-                const rec = attendance.find(a => a.studentId === s.id);
+                const rec = attendance.find(a => a.studentId === s.id && normalizeName(a.studentName) === normalizeName(s.name));
                 return (
                   <tr key={s.id}>
                     <td>{s.id}</td>

@@ -1,3 +1,4 @@
+//sessionController.js
 const Session = require('../models/Session');
 const Attendance = require('../models/Attendance');
 const crypto = require('crypto');

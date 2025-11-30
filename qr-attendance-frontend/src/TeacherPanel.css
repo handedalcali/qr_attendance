@@ -1,0 +1,116 @@
+/* TeacherPanel.css */
+.teacher-panel-container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  font-family: Arial, sans-serif;
+}
+
+.panel-title {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 28px;
+  color: #333;
+}
+
+.control-group {
+  margin-bottom: 15px;
+}
+
+.control-group.vertical label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.text-input, .duration-input, .file-input, .qr-url-textarea {
+  width: 100%;
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.session-create-buttons, .session-action-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-create-session { background-color: #4CAF50; color: white; }
+.btn-download-session { background-color: #2196F3; color: white; }
+.btn-add-student { background-color: #FF9800; color: white; }
+.btn-show { background-color: #9C27B0; color: white; }
+.btn-renew { background-color: #00BCD4; color: white; }
+.btn-clear { background-color: #F44336; color: white; }
+
+.message-info {
+  margin: 10px 0;
+  font-weight: bold;
+  color: #555;
+}
+
+.session-details p {
+  margin: 5px 0;
+}
+
+.qr-container {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.qr-label {
+  margin: 10px 0 5px 0;
+  font-weight: bold;
+}
+
+.qr-url-textarea {
+  resize: none;
+  margin-top: 5px;
+}
+
+.attendance-list-container {
+  margin-top: 20px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.filter-buttons button.active {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.attendance-table th, .attendance-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+.attendance-table th {
+  background-color: #f2f2f2;
+}

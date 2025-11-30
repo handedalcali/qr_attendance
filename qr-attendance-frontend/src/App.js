@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Switch, Route, Link, useLocation } from 'react
 // Sayfa Bileşenleri
 import TeacherPanel from './pages/TeacherPanel';
 import StudentScanner from './pages/StudentScanner';
+import SuccessPage from './pages/SuccessPage';
 
 import './App.css';
 
@@ -23,24 +24,6 @@ const HomePage = () => (
     </div>
   </div>
 );
-
-// Başarı Sayfası
-const SuccessPage = () => {
-  const location = useLocation();
-  const sessionId = new URLSearchParams(location.search).get("sessionId");
-
-  return (
-    <div className="success-container">
-      <h2 className="success-title">✅ Yoklamaya Başarıyla Katıldınız!</h2>
-      <p className="success-text">Kaydınız başarıyla tamamlandı.</p>
-      {sessionId && (
-        <p className="session-code-text">
-          Oturum Kodu: <strong>{sessionId}</strong>
-        </p>
-      )}
-    </div>
-  );
-};
 
 // 404 Sayfası
 const NotFoundPage = () => (

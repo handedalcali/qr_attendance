@@ -1,3 +1,4 @@
+//security.js
 const crypto = require('crypto');
 const HMAC_SECRET = process.env.HMAC_SECRET || 'test_secret';
 

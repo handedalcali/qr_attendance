@@ -1,3 +1,4 @@
+//api.js
 import axios from "axios";
 
 // Tarayıcı bilgilerini toplayan yardımcı fonksiyon

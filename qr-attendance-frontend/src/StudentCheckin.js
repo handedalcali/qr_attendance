@@ -8,6 +8,7 @@ export default function StudentCheckin() {
   const [name, setName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState(""); // "success" | "error"
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -18,7 +19,6 @@ export default function StudentCheckin() {
         const parsed = JSON.parse(decodeURIComponent(payloadJson));
         setSessionId(parsed.sessionId || parsed._id || "");
       } catch (e) {
-        // eğer payload doğrudan sessionId string ise
         setSessionId(payloadJson);
       }
     }
@@ -27,24 +27,41 @@ export default function StudentCheckin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    if (!sessionId) { setMessage("Oturum bilgisi bulunamadı."); return; }
-    if (!studentId && !name) { setMessage("Lütfen ad veya öğrenci numarası girin."); return; }
+    setMessageType("");
+
+    if (!sessionId) { 
+      setMessage("Oturum bilgisi bulunamadı."); 
+      setMessageType("error");
+      return; 
+    }
+    if (!studentId && !name) { 
+      setMessage("Lütfen ad veya öğrenci numarası girin."); 
+      setMessageType("error");
+      return; 
+    }
 
     setLoading(true);
     try {
-      // Backend API: markAttendance({ sessionId, studentId, name }) gibi çalışmalı
-      const res = await markAttendance({ sessionId}, studentId, name );
-      if (res?.ok || res?.success || res?.status === 200) {
-        setMessage("Yoklama başarıyla kaydedildi. Teşekkürler!");
+      const res = await markAttendance({ sessionId }, studentId, name);
+
+      if (res?.ok) {
+        setMessage("✅ Yoklama başarıyla kaydedildi. Teşekkürler!");
+        setMessageType("success");
+      } else if (res?.error) {
+        setMessage("⚠️ " + res.error);
+        setMessageType("error");
       } else {
-        setMessage("Hata: " + (res?.error || JSON.stringify(res)));
+        setMessage("⚠️ Bilgilerinizi kontrol edin.");
+        setMessageType("error");
       }
     } catch (err) {
       console.error(err);
       if (err?.response?.status === 409) {
-        setMessage("Bu öğrenci için zaten yoklama alınmış.");
+        setMessage("⚠️ Bu öğrenci için zaten yoklama alınmış!");
+        setMessageType("error");
       } else {
-        setMessage("Sunucu hatası: " + (err?.response?.data?.error || err?.message || String(err)));
+        setMessage("⚠️ Sunucu hatası: " + (err?.response?.data?.error || err?.message || String(err)));
+        setMessageType("error");
       }
     } finally {
       setLoading(false);
@@ -58,17 +75,34 @@ export default function StudentCheckin() {
 
       <form onSubmit={handleSubmit} className="checkin-form">
         <label>Ad Soyad</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="İsim Soyisim" />
+        <input 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          placeholder="İsim Soyisim" 
+          disabled={messageType === "success"} 
+        />
 
         <label>Öğrenci Numarası</label>
-        <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="Örn: 12345" />
+        <input 
+          value={studentId} 
+          onChange={(e) => setStudentId(e.target.value)} 
+          placeholder="Örn: 12345" 
+          disabled={messageType === "success"} 
+        />
 
-        <button type="submit" disabled={loading || !sessionId}>
+        <button 
+          type="submit" 
+          disabled={loading || !sessionId || messageType === "success"}
+        >
           {loading ? "Gönderiliyor..." : "Yoklamaya Katıl"}
         </button>
       </form>
 
-      {message && <p className="message-info">{message}</p>}
+      {message && (
+        <p className={messageType === "success" ? "message-success" : "message-error"}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }
